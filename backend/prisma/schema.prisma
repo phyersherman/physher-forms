@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id             String   @id @default(cuid())
+  name           String
+  defaultLocale  String
+  primaryColor   String?
+  secondaryColor String?
+  logoUrl        String?
+  is_template    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  domains        Domain[]
+  users          User[]
+  courses        Course[]
+  chapters       Chapter[]
+  modules        Module[]
+  blocks         Block[]
+  quizWidgets    QuizWidget[]
+}
+
+model Domain {
+  id        String  @id @default(cuid())
+  host      String  @unique
+  isPrimary Boolean @default(false)
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password      String?
+  fullName      String?
+  role          String
+  tenantId      String
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  refreshTokens RefreshToken[]
+}
+
+model Course {
+  id               String   @id @default(cuid())
+  title            String
+  description      String?
+  tenant_id        String?  // null = global course, set = tenant-specific course
+  tenant           Tenant?  @relation(fields: [tenant_id], references: [id])
+  global_course_id String?  // reference to the global course this was copied from
+  globalCourse     Course?  @relation("CourseToGlobalCourse", fields: [global_course_id], references: [id])
+  copiedCourses    Course[] @relation("CourseToGlobalCourse") // courses copied from this global course
+  chapters         Chapter[]
+  // Audit
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+}
+
+model Chapter {
+  id          String   @id @default(cuid())
+  course_id   String
+  course      Course   @relation(fields: [course_id], references: [id])
+  title       String
+  order_index Int      @default(0)
+  modules     Module[]
+  tenant_id   String?  // null = global, set = tenant-specific
+  tenant      Tenant?  @relation(fields: [tenant_id], references: [id])
+  // Assessment settings
+  assessment_title    String?
+  assessment_required Boolean  @default(false)
+  prerequisite_chapter_ids String[] // JSON array of chapter IDs
+  // Audit
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model CourseTemplate {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  modules     TemplateModule[]
+}
+
+model TemplateModule {
+  id          String   @id @default(cuid())
+  template_id String
+  template    CourseTemplate @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  title       String
+  slug        String?
+  summary     String?
+  order_index Int      @default(0)
+  blocks      TemplateModuleBlock[]
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model TemplateModuleBlock {
+  id                  String   @id @default(cuid())
+  template_module_id  String
+  template_module     TemplateModule @relation(fields: [template_module_id], references: [id], onDelete: Cascade)
+  type                String   // e.g., "text", "image", "video", "quiz", "assignment"
+  content             String?  // HTML/markdown for text, URL for media, etc.
+  config              String?  // JSON for quiz/assignment config
+  order_index         Int      @default(0)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+}model Module {
+  id                              String   @id @default(cuid())
+  chapter_id                      String
+  chapter                        Chapter  @relation(fields: [chapter_id], references: [id])
+  title                           String
+  slug                            String?
+  summary                         String?
+  order_index                     Int      @default(0)
+  blocks                          Block[]
+  // Gating settings
+  required                        Boolean  @default(true)
+  prerequisite_module_ids         String[] // JSON array of module IDs
+  requires_quiz_pass_to_continue  Boolean  @default(false)
+  // Other existing fields (content_type, etc.) can be moved to blocks
+  tenant_id                       String?  // null = global, set = tenant-specific
+  tenant                          Tenant?  @relation(fields: [tenant_id], references: [id])
+  // Audit
+  created_at                      DateTime @default(now())
+  updated_at                      DateTime @updatedAt
+}
+
+model Block {
+  id          String   @id @default(cuid())
+  module_id   String
+  module      Module   @relation(fields: [module_id], references: [id])
+  type        String   // e.g., "text", "image", "video", "quiz", "assignment"
+  content     String?  // HTML/markdown for text, URL for media, etc.
+  config      String?  // JSON for quiz/assignment config
+  order_index Int      @default(0)
+  tenant_id   String?  // null = global, set = tenant-specific
+  tenant      Tenant?  @relation(fields: [tenant_id], references: [id])
+  // Audit
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+// New model for quiz/assignment widgets (reusable across blocks)
+model QuizWidget {
+  id                String   @id @default(cuid())
+  title             String
+  type              String   // "quiz" or "assignment"
+  questions         String   // JSON array of questions
+  passing_score     Float?
+  attempts_allowed  Int      @default(1)
+  feedback_options  String?  // JSON for feedback settings
+  tenant_id         String
+  tenant            Tenant   @relation(fields: [tenant_id], references: [id])
+  // Relations: Blocks can reference this via config
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+}
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  tenantId   String
+  courseId   String
+  userId     String
+  enrolledAt DateTime @default(now())
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

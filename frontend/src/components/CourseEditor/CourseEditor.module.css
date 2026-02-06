@@ -1,0 +1,471 @@
+.container {
+  max-width: 1400px;
+}
+
+.header {
+  margin-bottom: 32px;
+}
+
+.title {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 28px;
+}
+
+.backLink {
+  color: #667eea;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mainColumn,
+.sideColumn {
+  min-width: 0;
+}
+
+.sideColumn {
+  position: sticky;
+  top: 24px;
+  height: fit-content;
+}
+
+.card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.cardTitle {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+}
+
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  min-height: 100px;
+  font-family: inherit;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.textareaSmall {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  min-height: 80px;
+  font-family: inherit;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.textarea:focus,
+.textareaSmall:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+/* Sections */
+.section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.sectionTitle {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.emptyState {
+  color: #64748b;
+  font-size: 14px;
+  margin-bottom: 16px;
+  padding: 20px;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+/* Chapters */
+.chapterList {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.chapterCard {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.chapterHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.chapterInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.chapterTitle {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+.chapterMeta {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.chapterActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Modules */
+.moduleList {
+  display: grid;
+  gap: 8px;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.moduleItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.moduleInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.moduleTitle {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.moduleMeta {
+  display: block;
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.moduleActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.addModuleButton {
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  color: #667eea;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.addModuleButton:hover {
+  background: #f8fafc;
+  border-color: #667eea;
+}
+
+/* Buttons */
+.iconButton {
+  padding: 4px 8px;
+  background: #e2e8f0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #333;
+  transition: all 0.15s ease;
+}
+
+.iconButton:hover:not(:disabled) {
+  background: #cbd5e1;
+}
+
+.iconButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.iconButton.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.iconButton.danger:hover:not(:disabled) {
+  background: #fecaca;
+}
+
+.smallButton {
+  padding: 3px 6px;
+  background: #e2e8f0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #333;
+  transition: all 0.15s ease;
+}
+
+.smallButton:hover:not(:disabled) {
+  background: #cbd5e1;
+}
+
+.smallButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.smallButton.primary {
+  background: #667eea;
+  color: white;
+}
+
+.smallButton.primary:hover:not(:disabled) {
+  background: #5a67d8;
+}
+
+.smallButton.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.smallButton.danger:hover:not(:disabled) {
+  background: #fecaca;
+}
+
+/* Add Chapter Form */
+.addChapterForm {
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.addChapterTitle {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #333;
+  font-weight: 600;
+}
+
+.addChapterRow {
+  display: flex;
+  gap: 8px;
+}
+
+.addButton {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.addButton:hover {
+  background: #5a67d8;
+}
+
+/* Form Actions */
+.formActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.saveButton {
+  flex: 1;
+  padding: 10px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: #5a67d8;
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.deleteButton {
+  padding: 10px 16px;
+  background: #fee2e2;
+  color: #991b1b;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.deleteButton:hover {
+  background: #fecaca;
+}
+
+/* Panel */
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
+  padding: 4px;
+  line-height: 1;
+}
+
+.closeButton:hover {
+  color: #333;
+}
+
+.panelActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.cancelButton {
+  flex: 1;
+  padding: 10px 16px;
+  background: #e2e8f0;
+  color: #333;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s ease;
+}
+
+.cancelButton:hover {
+  background: #cbd5e1;
+}
+
+/* Checkbox Field */
+.checkboxField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.checkboxField input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.checkboxField label {
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  margin: 0;
+}
