@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { IBlock, BlockProps } from '../types'
@@ -15,7 +15,7 @@ const TextBlock: React.FC<BlockProps> = ({
   onDelete,
 }) => {
   const [isMounted, setIsMounted] = useState(false)
-  const [wasUpdated, setWasUpdated] = useState(false)
+  const lastSavedContent = useRef(block.content || '')
 
   const editor = useEditor({
     extensions: [
@@ -43,12 +43,10 @@ const TextBlock: React.FC<BlockProps> = ({
       }),
     ],
     content: block.content || '',
-    onUpdate: ({ editor }) => {
-      setWasUpdated(true)
-    },
     onBlur: ({ editor }) => {
       const content = editor.getHTML()
-      if (content !== block.content) {
+      if (content !== lastSavedContent.current) {
+        lastSavedContent.current = content
         onUpdate({ content })
       }
     },
@@ -58,12 +56,19 @@ const TextBlock: React.FC<BlockProps> = ({
     setIsMounted(true)
   }, [])
 
+  // Only update editor if block content changed externally (from parent)
   useEffect(() => {
-    if (editor && block.content !== editor.getHTML() && !wasUpdated) {
-      editor.commands.setContent(block.content || '')
+    if (!editor) return
+    
+    const editorContent = editor.getHTML()
+    const blockContent = block.content || ''
+    
+    // Only update if content changed externally (not from user typing)
+    if (blockContent !== editorContent && blockContent !== lastSavedContent.current) {
+      editor.commands.setContent(blockContent)
+      lastSavedContent.current = blockContent
     }
-    setWasUpdated(false)
-  }, [block.content, editor, wasUpdated])
+  }, [block.id]) // Only depend on block ID, not content changes
 
   const preview = editor
     ?.getHTML()

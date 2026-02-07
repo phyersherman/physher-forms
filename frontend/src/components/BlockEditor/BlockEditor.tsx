@@ -4,10 +4,14 @@ import TextBlock from './blocks/TextBlock'
 import ImageBlock from './blocks/ImageBlock'
 import VideoBlock from './blocks/VideoBlock'
 import QuizBlock from './blocks/QuizBlock'
+import QuoteBlock from './blocks/QuoteBlock'
+import ButtonBlock from './blocks/ButtonBlock'
 import TextBlockDisplay from './blocks/TextBlockDisplay'
 import ImageBlockDisplay from './blocks/ImageBlockDisplay'
 import VideoBlockDisplay from './blocks/VideoBlockDisplay'
 import QuizBlockDisplay from './blocks/QuizBlockDisplay'
+import QuoteBlockDisplay from './blocks/QuoteBlockDisplay'
+import ButtonBlockDisplay from './blocks/ButtonBlockDisplay'
 import BlockToolbar from './BlockToolbar'
 import { IBlock } from './types'
 
@@ -119,6 +123,10 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
           return <VideoBlockDisplay key={block.id} block={block} />
         case 'quiz':
           return <QuizBlockDisplay key={block.id} block={block} />
+        case 'quote':
+          return <QuoteBlockDisplay key={block.id} block={block} />
+        case 'button':
+          return <ButtonBlockDisplay key={block.id} block={block} />
         default:
           return null
       }
@@ -143,6 +151,10 @@ const BlockEditor: React.FC<BlockEditorProps> = ({
         return <VideoBlock key={block.id} {...commonProps} />
       case 'quiz':
         return <QuizBlock key={block.id} {...commonProps} />
+      case 'quote':
+        return <QuoteBlock key={block.id} {...commonProps} />
+      case 'button':
+        return <ButtonBlock key={block.id} {...commonProps} />
       default:
         return null
     }
