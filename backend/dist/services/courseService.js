@@ -5,7 +5,58 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = __importDefault(require("../db/client"));
 const createCourse = async (data) => {
-    return client_1.default.course.create({ data: { title: data.title, description: data.description || null, tenant_id: data.tenant_id || null } });
+    const course = await client_1.default.course.create({
+        data: {
+            title: data.title,
+            description: data.description || null,
+            tenant_id: data.tenant_id || null
+        }
+    });
+    // Create chapters if provided
+    if (data.chapters && data.chapters.length > 0) {
+        for (const chapter of data.chapters) {
+            const createdChapter = await client_1.default.chapter.create({
+                data: {
+                    title: chapter.title,
+                    course_id: course.id,
+                    order_index: chapter.order_index || 0
+                }
+            });
+            // Create modules if provided
+            if (chapter.modules && chapter.modules.length > 0) {
+                for (const module of chapter.modules) {
+                    const createdModule = await client_1.default.module.create({
+                        data: {
+                            title: module.title,
+                            slug: module.slug || module.title.toLowerCase().replace(/\s+/g, '-'),
+                            summary: module.summary || '',
+                            chapter_id: createdChapter.id,
+                            order_index: module.order_index || 0
+                        }
+                    });
+                    // Create blocks if provided
+                    if (module.blocks && module.blocks.length > 0) {
+                        for (const block of module.blocks) {
+                            await client_1.default.block.create({
+                                data: {
+                                    type: block.type,
+                                    content: block.content || '',
+                                    config: block.config || '{}',
+                                    module_id: createdModule.id,
+                                    order_index: block.order_index || 0
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Return full course with chapters
+    return client_1.default.course.findUnique({
+        where: { id: course.id },
+        include: { chapters: { include: { modules: { include: { blocks: true } } } } }
+    });
 };
 const listGlobalCourses = async () => {
     return client_1.default.course.findMany({ where: { tenant_id: null }, include: { chapters: { include: { modules: { include: { blocks: true } } } } } });
@@ -17,7 +68,135 @@ const getById = async (id) => {
     return client_1.default.course.findUnique({ where: { id }, include: { chapters: { include: { modules: { include: { blocks: true } } } } } });
 };
 const updateCourse = async (id, data) => {
-    return client_1.default.course.update({ where: { id }, data });
+    // Update course basic info
+    const course = await client_1.default.course.update({
+        where: { id },
+        data: {
+            ...(data.title && { title: data.title }),
+            ...(data.description !== undefined && { description: data.description })
+        }
+    });
+    // If chapters provided, sync them with existing chapters
+    if (data.chapters !== undefined) {
+        const existingChapters = await client_1.default.chapter.findMany({ where: { course_id: id } });
+        const existingChapterIds = new Set(existingChapters.map(c => c.id));
+        const incomingChapterIds = new Set(data.chapters.filter(c => c.id).map(c => c.id));
+        // Delete chapters not in incoming data
+        const chaptersToDelete = existingChapters.filter(c => !incomingChapterIds.has(c.id));
+        for (const ch of chaptersToDelete) {
+            await client_1.default.chapter.delete({ where: { id: ch.id } });
+        }
+        // Upsert chapters
+        for (const chapter of data.chapters) {
+            let chapterId;
+            if (chapter.id && existingChapterIds.has(chapter.id)) {
+                // Update existing chapter
+                await client_1.default.chapter.update({
+                    where: { id: chapter.id },
+                    data: {
+                        title: chapter.title,
+                        order_index: chapter.order_index || 0
+                    }
+                });
+                chapterId = chapter.id;
+            }
+            else {
+                // Create new chapter
+                const created = await client_1.default.chapter.create({
+                    data: {
+                        title: chapter.title,
+                        course_id: id,
+                        order_index: chapter.order_index || 0
+                    }
+                });
+                chapterId = created.id;
+            }
+            // Handle modules
+            if (chapter.modules && chapter.modules.length > 0) {
+                const existingModules = await client_1.default.module.findMany({ where: { chapter_id: chapterId } });
+                const existingModuleIds = new Set(existingModules.map((m) => m.id));
+                const incomingModuleIds = new Set(chapter.modules.filter((m) => m.id).map((m) => m.id));
+                // Delete modules not in incoming data
+                const modulesToDelete = existingModules.filter(m => !incomingModuleIds.has(m.id));
+                for (const mod of modulesToDelete) {
+                    await client_1.default.module.delete({ where: { id: mod.id } });
+                }
+                // Upsert modules
+                for (const module of chapter.modules) {
+                    let moduleId;
+                    if (module.id && existingModuleIds.has(module.id)) {
+                        // Update existing module
+                        await client_1.default.module.update({
+                            where: { id: module.id },
+                            data: {
+                                title: module.title,
+                                slug: module.slug || module.title.toLowerCase().replace(/\s+/g, '-'),
+                                summary: module.summary || '',
+                                order_index: module.order_index || 0
+                            }
+                        });
+                        moduleId = module.id;
+                    }
+                    else {
+                        // Create new module
+                        const created = await client_1.default.module.create({
+                            data: {
+                                title: module.title,
+                                slug: module.slug || module.title.toLowerCase().replace(/\s+/g, '-'),
+                                summary: module.summary || '',
+                                chapter_id: chapterId,
+                                order_index: module.order_index || 0
+                            }
+                        });
+                        moduleId = created.id;
+                    }
+                    // Handle blocks
+                    if (module.blocks && module.blocks.length > 0) {
+                        const existingBlocks = await client_1.default.block.findMany({ where: { module_id: moduleId } });
+                        const existingBlockIds = new Set(existingBlocks.map((b) => b.id));
+                        const incomingBlockIds = new Set(module.blocks.filter((b) => b.id).map((b) => b.id));
+                        // Delete blocks not in incoming data
+                        const blocksToDelete = existingBlocks.filter(b => !incomingBlockIds.has(b.id));
+                        for (const blk of blocksToDelete) {
+                            await client_1.default.block.delete({ where: { id: blk.id } });
+                        }
+                        // Upsert blocks
+                        for (const block of module.blocks) {
+                            if (block.id && existingBlockIds.has(block.id)) {
+                                // Update existing block
+                                await client_1.default.block.update({
+                                    where: { id: block.id },
+                                    data: {
+                                        type: block.type,
+                                        content: block.content || '',
+                                        config: block.config || '{}',
+                                        order_index: block.order_index || 0
+                                    }
+                                });
+                            }
+                            else {
+                                // Create new block
+                                await client_1.default.block.create({
+                                    data: {
+                                        type: block.type,
+                                        content: block.content || '',
+                                        config: block.config || '{}',
+                                        module_id: moduleId,
+                                        order_index: block.order_index || 0
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Return updated course with chapters
+    return client_1.default.course.findUnique({
+        where: { id },
+        include: { chapters: { include: { modules: { include: { blocks: true } } } } }
+    });
 };
 const deleteCourse = async (id) => {
     return client_1.default.course.delete({ where: { id } });
@@ -60,6 +239,9 @@ const assignCourseToTenant = async (globalCourseId, tenantId, overrideTitle) => 
             global_course_id: globalCourseId
         }
     });
+    // Map old module IDs to new module IDs during copying
+    const moduleIdMap = new Map();
+    const chapterIdMap = new Map();
     // Copy chapters and their content
     for (const chapter of globalCourse.chapters) {
         const newChapter = await client_1.default.chapter.create({
@@ -70,10 +252,11 @@ const assignCourseToTenant = async (globalCourseId, tenantId, overrideTitle) => 
                 tenant_id: tenantId,
                 assessment_title: chapter.assessment_title || undefined,
                 assessment_required: chapter.assessment_required || false,
-                prerequisite_chapter_ids: chapter.prerequisite_chapter_ids || []
+                prerequisite_chapter_ids: [] // Will update after all chapters are created
             }
         });
-        // Copy modules in each chapter
+        chapterIdMap.set(chapter.id, newChapter.id);
+        // Copy modules in each chapter (first pass: create modules without prerequisites)
         for (const module of chapter.modules) {
             const newModule = await client_1.default.module.create({
                 data: {
@@ -83,11 +266,12 @@ const assignCourseToTenant = async (globalCourseId, tenantId, overrideTitle) => 
                     summary: module.summary,
                     order_index: module.order_index,
                     required: module.required,
-                    prerequisite_module_ids: module.prerequisite_module_ids,
+                    prerequisite_module_ids: [], // Will update after all modules are created
                     requires_quiz_pass_to_continue: module.requires_quiz_pass_to_continue,
                     tenant_id: tenantId
                 }
             });
+            moduleIdMap.set(module.id, newModule.id);
             // Copy blocks in each module
             for (const block of module.blocks) {
                 await client_1.default.block.create({
@@ -99,6 +283,31 @@ const assignCourseToTenant = async (globalCourseId, tenantId, overrideTitle) => 
                         order_index: block.order_index,
                         tenant_id: tenantId
                     }
+                });
+            }
+        }
+    }
+    // Second pass: update prerequisites using the ID mappings
+    for (const chapter of globalCourse.chapters) {
+        const newChapter = await client_1.default.chapter.findUnique({
+            where: { id: chapterIdMap.get(chapter.id) },
+            include: { modules: true }
+        });
+        if (newChapter && chapter.prerequisite_chapter_ids?.length) {
+            const remappedChapterPrereqs = chapter.prerequisite_chapter_ids.map(id => chapterIdMap.get(id) || id).filter(Boolean);
+            await client_1.default.chapter.update({
+                where: { id: newChapter.id },
+                data: { prerequisite_chapter_ids: remappedChapterPrereqs }
+            });
+        }
+        // Update module prerequisites
+        for (const module of chapter.modules) {
+            const newModuleId = moduleIdMap.get(module.id);
+            if (newModuleId && module.prerequisite_module_ids?.length) {
+                const remappedModulePrereqs = module.prerequisite_module_ids.map(id => moduleIdMap.get(id) || id).filter(Boolean);
+                await client_1.default.module.update({
+                    where: { id: newModuleId },
+                    data: { prerequisite_module_ids: remappedModulePrereqs }
                 });
             }
         }
@@ -132,6 +341,9 @@ const copyFromTemplate = async (templateId, data) => {
             tenant_id: data.tenant_id
         }
     });
+    // Map old module IDs to new module IDs during copying
+    const moduleIdMap = new Map();
+    const chapterIdMap = new Map();
     // Copy chapters and their content
     for (const chapter of template.chapters) {
         const newChapter = await client_1.default.chapter.create({
@@ -142,10 +354,11 @@ const copyFromTemplate = async (templateId, data) => {
                 tenant_id: data.tenant_id,
                 assessment_title: chapter.assessment_title || undefined,
                 assessment_required: chapter.assessment_required || false,
-                prerequisite_chapter_ids: chapter.prerequisite_chapter_ids || []
+                prerequisite_chapter_ids: [] // Will update after all chapters are created
             }
         });
-        // Copy modules in each chapter
+        chapterIdMap.set(chapter.id, newChapter.id);
+        // Copy modules in each chapter (first pass: create modules without prerequisites)
         for (const module of chapter.modules) {
             const newModule = await client_1.default.module.create({
                 data: {
@@ -155,11 +368,12 @@ const copyFromTemplate = async (templateId, data) => {
                     summary: module.summary,
                     order_index: module.order_index,
                     required: module.required,
-                    prerequisite_module_ids: module.prerequisite_module_ids,
+                    prerequisite_module_ids: [], // Will update after all modules are created
                     requires_quiz_pass_to_continue: module.requires_quiz_pass_to_continue,
                     tenant_id: data.tenant_id
                 }
             });
+            moduleIdMap.set(module.id, newModule.id);
             // Copy blocks in each module
             for (const block of module.blocks) {
                 await client_1.default.block.create({
@@ -171,6 +385,31 @@ const copyFromTemplate = async (templateId, data) => {
                         order_index: block.order_index,
                         tenant_id: data.tenant_id
                     }
+                });
+            }
+        }
+    }
+    // Second pass: update prerequisites using the ID mappings
+    for (const chapter of template.chapters) {
+        const newChapter = await client_1.default.chapter.findUnique({
+            where: { id: chapterIdMap.get(chapter.id) },
+            include: { modules: true }
+        });
+        if (newChapter && chapter.prerequisite_chapter_ids?.length) {
+            const remappedChapterPrereqs = chapter.prerequisite_chapter_ids.map(id => chapterIdMap.get(id) || id).filter(Boolean);
+            await client_1.default.chapter.update({
+                where: { id: newChapter.id },
+                data: { prerequisite_chapter_ids: remappedChapterPrereqs }
+            });
+        }
+        // Update module prerequisites
+        for (const module of chapter.modules) {
+            const newModuleId = moduleIdMap.get(module.id);
+            if (newModuleId && module.prerequisite_module_ids?.length) {
+                const remappedModulePrereqs = module.prerequisite_module_ids.map(id => moduleIdMap.get(id) || id).filter(Boolean);
+                await client_1.default.module.update({
+                    where: { id: newModuleId },
+                    data: { prerequisite_module_ids: remappedModulePrereqs }
                 });
             }
         }

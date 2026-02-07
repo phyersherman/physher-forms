@@ -13,7 +13,8 @@ const createTemplate = async (req, res) => {
         res.status(201).json(t);
     }
     catch (err) {
-        res.status(500).json({ error: 'Failed to create template' });
+        console.error('[createTemplate] Error:', err);
+        res.status(500).json({ error: 'Failed to create template', details: err instanceof Error ? err.message : String(err) });
     }
 };
 const listTemplates = async (req, res) => {
@@ -71,7 +72,8 @@ const addTemplateModule = async (req, res) => {
         res.status(201).json(module);
     }
     catch (err) {
-        res.status(500).json({ error: 'Failed to create template module' });
+        console.error('[addTemplateModule] Error:', err);
+        res.status(500).json({ error: 'Failed to create template module', details: err instanceof Error ? err.message : String(err) });
     }
 };
 const getTemplateModule = async (req, res) => {
@@ -125,7 +127,8 @@ const addTemplateModuleBlock = async (req, res) => {
         res.status(201).json(block);
     }
     catch (err) {
-        res.status(500).json({ error: 'Failed to create block' });
+        console.error('[addTemplateModuleBlock] Error:', err);
+        res.status(500).json({ error: 'Failed to create block', details: err instanceof Error ? err.message : String(err) });
     }
 };
 const getTemplateModuleBlocks = async (req, res) => {

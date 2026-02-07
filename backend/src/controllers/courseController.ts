@@ -30,7 +30,7 @@ const listGlobalCourses = async (req: Request, res: Response) => {
 }
 
 const listCourses = async (req: Request, res: Response) => {
-  const tenant_id = req.params.tenantId || req.query.tenant_id as string || req.user?.tenantId
+  const tenant_id = (req.params.tenantId || (typeof req.query.tenant_id === 'string' ? req.query.tenant_id : undefined) || req.user?.tenantId) as string
   if (!tenant_id) return res.status(400).json({ error: 'tenant_id required' })
   const courses = await courseService.listByTenant(tenant_id)
   res.json(courses)
@@ -41,7 +41,8 @@ const assignCourseToTenant = async (req: Request, res: Response) => {
   if (!globalCourseId || !tenantId) return res.status(400).json({ error: 'globalCourseId and tenantId required' })
 
   try {
-    const course = await courseService.assignCourseToTenant(globalCourseId, tenantId, title)
+    const titleStr = typeof title === 'string' ? title : undefined
+    const course = await courseService.assignCourseToTenant(globalCourseId as string, tenantId as string, titleStr)
     res.status(201).json(course)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to assign course'

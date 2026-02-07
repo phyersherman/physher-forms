@@ -104,13 +104,37 @@ const deleteTemplate = async (id) => {
 };
 // Template module operations
 const createTemplateModule = async (data) => {
-    return client_1.default.templateModule.create({
+    // Templates are stored as Courses with is_template=true
+    // We need to get or create a default chapter first
+    const course = await client_1.default.course.findUnique({
+        where: { id: data.template_id },
+        include: { chapters: true }
+    });
+    if (!course)
+        throw new Error('Template not found');
+    // Get or create default chapter
+    let chapter;
+    if (course.chapters && course.chapters.length > 0) {
+        chapter = course.chapters[0];
+    }
+    else {
+        chapter = await client_1.default.chapter.create({
+            data: {
+                course_id: data.template_id,
+                title: 'Default Chapter',
+                order_index: 0,
+            }
+        });
+    }
+    // Create module under the chapter
+    return client_1.default.module.create({
         data: {
-            template_id: data.template_id,
+            chapter_id: chapter.id,
             title: data.title,
             slug: data.slug,
             summary: data.summary,
             order_index: data.order,
+            tenant_id: course.tenant_id || undefined,
         },
         include: {
             blocks: true,
@@ -118,7 +142,7 @@ const createTemplateModule = async (data) => {
     });
 };
 const getTemplateModuleById = async (id) => {
-    return client_1.default.templateModule.findUnique({
+    return client_1.default.module.findUnique({
         where: { id },
         include: {
             blocks: true,
@@ -135,7 +159,7 @@ const updateTemplateModule = async (id, data) => {
         updateData.summary = data.summary;
     if (data.order !== undefined)
         updateData.order_index = data.order;
-    return client_1.default.templateModule.update({
+    return client_1.default.module.update({
         where: { id },
         data: updateData,
         include: {
@@ -144,15 +168,15 @@ const updateTemplateModule = async (id, data) => {
     });
 };
 const deleteTemplateModule = async (id) => {
-    return client_1.default.templateModule.delete({
+    return client_1.default.module.delete({
         where: { id },
     });
 };
-// Template module blocks
+// Template module blocks (using regular Block model)
 const createTemplateModuleBlock = async (data) => {
-    return client_1.default.templateModuleBlock.create({
+    return client_1.default.block.create({
         data: {
-            template_module_id: data.template_module_id,
+            module_id: data.template_module_id,
             type: data.type,
             content: data.content,
             config: data.config,
@@ -161,13 +185,13 @@ const createTemplateModuleBlock = async (data) => {
     });
 };
 const listTemplateModuleBlocks = async (moduleId) => {
-    return client_1.default.templateModuleBlock.findMany({
-        where: { template_module_id: moduleId },
+    return client_1.default.block.findMany({
+        where: { module_id: moduleId },
         orderBy: { order_index: 'asc' },
     });
 };
 const deleteTemplateModuleBlock = async (id) => {
-    return client_1.default.templateModuleBlock.delete({
+    return client_1.default.block.delete({
         where: { id },
     });
 };

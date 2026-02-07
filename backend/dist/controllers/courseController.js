@@ -5,12 +5,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const courseService_1 = __importDefault(require("../services/courseService"));
 const createCourse = async (req, res) => {
-    const { title, description, tenant_id } = req.body;
+    const { title, description, tenantId, tenant_id, chapters } = req.body;
+    const finalTenantId = tenantId || tenant_id;
     try {
         const course = await courseService_1.default.createCourse({
             title: title || 'New Course',
             description,
-            tenant_id
+            tenant_id: finalTenantId,
+            chapters
         });
         res.status(201).json(course);
     }
@@ -30,7 +32,7 @@ const listGlobalCourses = async (req, res) => {
     }
 };
 const listCourses = async (req, res) => {
-    const tenant_id = req.params.tenantId || req.query.tenant_id || req.user?.tenantId;
+    const tenant_id = (req.params.tenantId || (typeof req.query.tenant_id === 'string' ? req.query.tenant_id : undefined) || req.user?.tenantId);
     if (!tenant_id)
         return res.status(400).json({ error: 'tenant_id required' });
     const courses = await courseService_1.default.listByTenant(tenant_id);
@@ -41,7 +43,8 @@ const assignCourseToTenant = async (req, res) => {
     if (!globalCourseId || !tenantId)
         return res.status(400).json({ error: 'globalCourseId and tenantId required' });
     try {
-        const course = await courseService_1.default.assignCourseToTenant(globalCourseId, tenantId, title);
+        const titleStr = typeof title === 'string' ? title : undefined;
+        const course = await courseService_1.default.assignCourseToTenant(globalCourseId, tenantId, titleStr);
         res.status(201).json(course);
     }
     catch (err) {
@@ -54,8 +57,8 @@ const deleteCourse = async (req, res) => {
     res.json({ ok: true });
 };
 const updateCourse = async (req, res) => {
-    const { title, description } = req.body;
-    const updated = await courseService_1.default.updateCourse(req.params.id, { title, description });
+    const { title, description, chapters } = req.body;
+    const updated = await courseService_1.default.updateCourse(req.params.id, { title, description, chapters });
     res.json(updated);
 };
 const getCourse = async (req, res) => {
