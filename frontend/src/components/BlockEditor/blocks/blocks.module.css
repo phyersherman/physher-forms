@@ -143,3 +143,75 @@
 .deleteButton:hover {
   background-color: #ff5252;
 }
+
+.richTextEditor {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: white;
+}
+
+.editorContent {
+  padding: 12px;
+  min-height: 180px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+}
+
+.editorContent p {
+  margin: 0.5em 0;
+}
+
+.editorContent h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0.5em 0;
+}
+
+.editorContent h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0.5em 0;
+}
+
+.editorContent ul,
+.editorContent ol {
+  margin: 0.5em 0;
+  padding-left: 2em;
+}
+
+.editorContent li {
+  margin: 0.25em 0;
+}
+
+.editorContent blockquote {
+  border-left: 3px solid #0ea5a4;
+  padding-left: 1em;
+  margin: 0.5em 0;
+  color: #666;
+  font-style: italic;
+}
+
+.editorContent pre {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.editorContent code {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.editorContent a {
+  color: #0ea5a4;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.editorContent a:hover {
+  color: #0d8786;
+}

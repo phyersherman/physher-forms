@@ -1,6 +1,11 @@
+'use client'
+
 import React, { useState, useEffect } from 'react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
 import { IBlock, BlockProps } from '../types'
 import styles from './blocks.module.css'
+import { MenuBar } from './MenuBar'
 
 const TextBlock: React.FC<BlockProps> = ({
   block,
@@ -9,19 +14,65 @@ const TextBlock: React.FC<BlockProps> = ({
   onUpdate,
   onDelete,
 }) => {
-  const [content, setContent] = useState(block.content || '')
+  const [isMounted, setIsMounted] = useState(false)
+  const [wasUpdated, setWasUpdated] = useState(false)
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        paragraph: {
+          HTMLAttributes: {
+            class: 'paragraph',
+          },
+        },
+        heading: {
+          HTMLAttributes: {
+            class: 'heading',
+          },
+        },
+        bulletList: {
+          HTMLAttributes: {
+            class: 'bullet-list',
+          },
+        },
+        orderedList: {
+          HTMLAttributes: {
+            class: 'ordered-list',
+          },
+        },
+      }),
+    ],
+    content: block.content || '',
+    onUpdate: ({ editor }) => {
+      setWasUpdated(true)
+    },
+    onBlur: ({ editor }) => {
+      const content = editor.getHTML()
+      if (content !== block.content) {
+        onUpdate({ content })
+      }
+    },
+  })
 
   useEffect(() => {
-    setContent(block.content || '')
-  }, [block.content])
+    setIsMounted(true)
+  }, [])
 
-  const handleBlur = () => {
-    if (content !== block.content) {
-      onUpdate({ content })
+  useEffect(() => {
+    if (editor && block.content !== editor.getHTML() && !wasUpdated) {
+      editor.commands.setContent(block.content || '')
     }
-  }
+    setWasUpdated(false)
+  }, [block.content, editor, wasUpdated])
 
-  const preview = content.substring(0, 100).replace(/<[^>]*>/g, '')
+  const preview = editor
+    ?.getHTML()
+    .substring(0, 100)
+    .replace(/<[^>]*>/g, '') || ''
+
+  if (!editor) {
+    return null
+  }
 
   return (
     <div className={styles.block}>
@@ -39,14 +90,12 @@ const TextBlock: React.FC<BlockProps> = ({
 
       {isExpanded && (
         <div className={styles.blockContent}>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onBlur={handleBlur}
-            placeholder="Enter text content (supports HTML)"
-            rows={6}
-            className={styles.textarea}
-          />
+          {isMounted && (
+            <div className={styles.richTextEditor}>
+              <MenuBar editor={editor} />
+              <EditorContent editor={editor} className={styles.editorContent} />
+            </div>
+          )}
           <button
             className={styles.deleteButton}
             onClick={onDelete}
@@ -56,10 +105,10 @@ const TextBlock: React.FC<BlockProps> = ({
         </div>
       )}
 
-      {!isExpanded && content && (
+      {!isExpanded && editor.getHTML() && (
         <div
           className={styles.preview}
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: editor.getHTML() }}
         />
       )}
     </div>
