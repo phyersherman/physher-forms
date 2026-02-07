@@ -311,28 +311,38 @@ const assignCourseToTenant = async (globalCourseId: string, tenantId: string, ov
 
   // Second pass: update prerequisites using the ID mappings
   for (const chapter of globalCourse.chapters) {
-    const newChapter = await prisma.chapter.findUnique({
-      where: { id: chapterIdMap.get(chapter.id)! },
-      include: { modules: true }
-    })
+    const newChapterId = chapterIdMap.get(chapter.id)
+    if (!newChapterId) continue
 
-    if (newChapter && chapter.prerequisite_chapter_ids?.length) {
-      const remappedChapterPrereqs = chapter.prerequisite_chapter_ids.map(id => chapterIdMap.get(id) || id).filter(Boolean)
-      await prisma.chapter.update({
-        where: { id: newChapter.id },
-        data: { prerequisite_chapter_ids: remappedChapterPrereqs }
-      })
+    // Update chapter prerequisites - only include prerequisite chapters that exist in the copy
+    if (chapter.prerequisite_chapter_ids?.length) {
+      const remappedChapterPrereqs = chapter.prerequisite_chapter_ids
+        .map(id => chapterIdMap.get(id))
+        .filter((id): id is string => !!id)
+      
+      if (remappedChapterPrereqs.length > 0) {
+        await prisma.chapter.update({
+          where: { id: newChapterId },
+          data: { prerequisite_chapter_ids: remappedChapterPrereqs }
+        })
+      }
     }
 
     // Update module prerequisites
     for (const module of chapter.modules) {
       const newModuleId = moduleIdMap.get(module.id)
       if (newModuleId && module.prerequisite_module_ids?.length) {
-        const remappedModulePrereqs = module.prerequisite_module_ids.map(id => moduleIdMap.get(id) || id).filter(Boolean)
-        await prisma.module.update({
-          where: { id: newModuleId },
-          data: { prerequisite_module_ids: remappedModulePrereqs }
-        })
+        // Only include prerequisites that exist in the copied modules
+        const remappedModulePrereqs = module.prerequisite_module_ids
+          .map(id => moduleIdMap.get(id))
+          .filter((id): id is string => !!id)
+        
+        if (remappedModulePrereqs.length > 0) {
+          await prisma.module.update({
+            where: { id: newModuleId },
+            data: { prerequisite_module_ids: remappedModulePrereqs }
+          })
+        }
       }
     }
   }
@@ -425,28 +435,38 @@ const copyFromTemplate = async (templateId: string, data: { title: string; descr
 
   // Second pass: update prerequisites using the ID mappings
   for (const chapter of template.chapters) {
-    const newChapter = await prisma.chapter.findUnique({
-      where: { id: chapterIdMap.get(chapter.id)! },
-      include: { modules: true }
-    })
+    const newChapterId = chapterIdMap.get(chapter.id)
+    if (!newChapterId) continue
 
-    if (newChapter && chapter.prerequisite_chapter_ids?.length) {
-      const remappedChapterPrereqs = chapter.prerequisite_chapter_ids.map(id => chapterIdMap.get(id) || id).filter(Boolean)
-      await prisma.chapter.update({
-        where: { id: newChapter.id },
-        data: { prerequisite_chapter_ids: remappedChapterPrereqs }
-      })
+    // Update chapter prerequisites - only include prerequisite chapters that exist in the copy
+    if (chapter.prerequisite_chapter_ids?.length) {
+      const remappedChapterPrereqs = chapter.prerequisite_chapter_ids
+        .map(id => chapterIdMap.get(id))
+        .filter((id): id is string => !!id)
+      
+      if (remappedChapterPrereqs.length > 0) {
+        await prisma.chapter.update({
+          where: { id: newChapterId },
+          data: { prerequisite_chapter_ids: remappedChapterPrereqs }
+        })
+      }
     }
 
     // Update module prerequisites
     for (const module of chapter.modules) {
       const newModuleId = moduleIdMap.get(module.id)
       if (newModuleId && module.prerequisite_module_ids?.length) {
-        const remappedModulePrereqs = module.prerequisite_module_ids.map(id => moduleIdMap.get(id) || id).filter(Boolean)
-        await prisma.module.update({
-          where: { id: newModuleId },
-          data: { prerequisite_module_ids: remappedModulePrereqs }
-        })
+        // Only include prerequisites that exist in the copied modules
+        const remappedModulePrereqs = module.prerequisite_module_ids
+          .map(id => moduleIdMap.get(id))
+          .filter((id): id is string => !!id)
+        
+        if (remappedModulePrereqs.length > 0) {
+          await prisma.module.update({
+            where: { id: newModuleId },
+            data: { prerequisite_module_ids: remappedModulePrereqs }
+          })
+        }
       }
     }
   }

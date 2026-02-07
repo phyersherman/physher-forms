@@ -289,26 +289,35 @@ const assignCourseToTenant = async (globalCourseId, tenantId, overrideTitle) => 
     }
     // Second pass: update prerequisites using the ID mappings
     for (const chapter of globalCourse.chapters) {
-        const newChapter = await client_1.default.chapter.findUnique({
-            where: { id: chapterIdMap.get(chapter.id) },
-            include: { modules: true }
-        });
-        if (newChapter && chapter.prerequisite_chapter_ids?.length) {
-            const remappedChapterPrereqs = chapter.prerequisite_chapter_ids.map(id => chapterIdMap.get(id) || id).filter(Boolean);
-            await client_1.default.chapter.update({
-                where: { id: newChapter.id },
-                data: { prerequisite_chapter_ids: remappedChapterPrereqs }
-            });
+        const newChapterId = chapterIdMap.get(chapter.id);
+        if (!newChapterId)
+            continue;
+        // Update chapter prerequisites - only include prerequisite chapters that exist in the copy
+        if (chapter.prerequisite_chapter_ids?.length) {
+            const remappedChapterPrereqs = chapter.prerequisite_chapter_ids
+                .map(id => chapterIdMap.get(id))
+                .filter((id) => !!id);
+            if (remappedChapterPrereqs.length > 0) {
+                await client_1.default.chapter.update({
+                    where: { id: newChapterId },
+                    data: { prerequisite_chapter_ids: remappedChapterPrereqs }
+                });
+            }
         }
         // Update module prerequisites
         for (const module of chapter.modules) {
             const newModuleId = moduleIdMap.get(module.id);
             if (newModuleId && module.prerequisite_module_ids?.length) {
-                const remappedModulePrereqs = module.prerequisite_module_ids.map(id => moduleIdMap.get(id) || id).filter(Boolean);
-                await client_1.default.module.update({
-                    where: { id: newModuleId },
-                    data: { prerequisite_module_ids: remappedModulePrereqs }
-                });
+                // Only include prerequisites that exist in the copied modules
+                const remappedModulePrereqs = module.prerequisite_module_ids
+                    .map(id => moduleIdMap.get(id))
+                    .filter((id) => !!id);
+                if (remappedModulePrereqs.length > 0) {
+                    await client_1.default.module.update({
+                        where: { id: newModuleId },
+                        data: { prerequisite_module_ids: remappedModulePrereqs }
+                    });
+                }
             }
         }
     }
@@ -391,26 +400,35 @@ const copyFromTemplate = async (templateId, data) => {
     }
     // Second pass: update prerequisites using the ID mappings
     for (const chapter of template.chapters) {
-        const newChapter = await client_1.default.chapter.findUnique({
-            where: { id: chapterIdMap.get(chapter.id) },
-            include: { modules: true }
-        });
-        if (newChapter && chapter.prerequisite_chapter_ids?.length) {
-            const remappedChapterPrereqs = chapter.prerequisite_chapter_ids.map(id => chapterIdMap.get(id) || id).filter(Boolean);
-            await client_1.default.chapter.update({
-                where: { id: newChapter.id },
-                data: { prerequisite_chapter_ids: remappedChapterPrereqs }
-            });
+        const newChapterId = chapterIdMap.get(chapter.id);
+        if (!newChapterId)
+            continue;
+        // Update chapter prerequisites - only include prerequisite chapters that exist in the copy
+        if (chapter.prerequisite_chapter_ids?.length) {
+            const remappedChapterPrereqs = chapter.prerequisite_chapter_ids
+                .map(id => chapterIdMap.get(id))
+                .filter((id) => !!id);
+            if (remappedChapterPrereqs.length > 0) {
+                await client_1.default.chapter.update({
+                    where: { id: newChapterId },
+                    data: { prerequisite_chapter_ids: remappedChapterPrereqs }
+                });
+            }
         }
         // Update module prerequisites
         for (const module of chapter.modules) {
             const newModuleId = moduleIdMap.get(module.id);
             if (newModuleId && module.prerequisite_module_ids?.length) {
-                const remappedModulePrereqs = module.prerequisite_module_ids.map(id => moduleIdMap.get(id) || id).filter(Boolean);
-                await client_1.default.module.update({
-                    where: { id: newModuleId },
-                    data: { prerequisite_module_ids: remappedModulePrereqs }
-                });
+                // Only include prerequisites that exist in the copied modules
+                const remappedModulePrereqs = module.prerequisite_module_ids
+                    .map(id => moduleIdMap.get(id))
+                    .filter((id) => !!id);
+                if (remappedModulePrereqs.length > 0) {
+                    await client_1.default.module.update({
+                        where: { id: newModuleId },
+                        data: { prerequisite_module_ids: remappedModulePrereqs }
+                    });
+                }
             }
         }
     }
