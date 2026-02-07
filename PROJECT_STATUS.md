@@ -39,12 +39,23 @@ A multi-tenant LMS framework where:
    - Custom toolbar with visual formatting buttons
    - Proper styling and integration with existing editor layout
    - Client-side rendering with no SSR issues
-2. **Enhanced Blocks**
-   - Quote block: styling, attribution, formatting options
-   - Button block: links, styling, text customization
-3. **Editor Layout Reorganization** (ATTEMPTED - ROLLED BACK)
+
+2. **Enhanced Blocks** ✅ DONE
+   - **Quote Block**: 
+     - Attribution/author field
+     - Configurable text color, border color, background color
+     - Live preview with formatted quote
+   - **Button Block**: 
+     - URL/link destination
+     - Configurable size (small, medium, large), alignment (left, center, right)
+     - Customizable button and text colors
+     - Open in new tab option
+     - Live preview with hover effects
+   - Both blocks have editor and display components integrated into the lesson editor
+
+3. **Editor Layout Reorganization** (PENDING)
    - Goal: Move chapter list to sidebar, expand module editor
-   - Note: JSX syntax error encountered. Deferred for cleaner implementation
+   - Note: Deferred for cleaner implementation in future phase
 
 ### Phase 4: Learner Experience (PENDING)
 1. **Learner-facing frontend** - Separate interface for consuming courses
@@ -116,15 +127,10 @@ To view more: `git log --oneline -10`
 
 2. **Rich Text Editor - Link Support (Future Enhancement)**
    - Link button removed for now to focus on core formatting
-   - Can be added in Phase 3 Step 2 with proper Tiptap Link extension configuration
+   - Can be added in future phase with proper Tiptap Link extension configuration
    - Current supported formats: Bold, Italic, Strikethrough, Headings, Lists, Blockquotes, Code Blocks
 
-3. **Limited Block Types**
-   - Only basic implementations
-   - Quote and Button blocks need styling/options
-   - Text blocks now have rich formatting ✅ DONE
-
-4. **No Learner Interface Yet**
+3. **No Learner Interface Yet**
    - Preview pages exist but not fully connected
    - Admin-only editor currently
 
