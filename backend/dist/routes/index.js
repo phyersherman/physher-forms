@@ -22,6 +22,7 @@ router.delete('/tenants/:id', (0, authGuard_2.requireAuth)(['admin']), tenantCon
 router.get('/courses/global', (0, authGuard_2.requireAuth)(['admin']), courseController_1.default.listGlobalCourses);
 router.post('/courses', (0, authGuard_2.requireAuth)(['admin']), courseController_1.default.createCourse);
 router.post('/courses/assign-to-tenant', (0, authGuard_2.requireAuth)(['admin']), courseController_1.default.assignCourseToTenant);
+router.post('/courses/:courseId/copy', (0, authGuard_2.requireAuth)(['admin']), courseController_1.default.copyCourse);
 // tenant-specific courses (admin)
 router.post('/tenants/:tenantId/courses', (0, authGuard_2.requireAuth)(['admin']), courseController_1.default.createCourse);
 router.get('/tenants/:tenantId/courses', (0, authGuard_2.requireAuth)(['admin']), courseController_1.default.listCourses);

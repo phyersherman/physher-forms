@@ -52,6 +52,20 @@ const assignCourseToTenant = async (req, res) => {
         res.status(400).json({ error: message });
     }
 };
+const copyCourse = async (req, res) => {
+    const { courseId } = req.params;
+    const { targetTenantId } = req.body;
+    if (!targetTenantId)
+        return res.status(400).json({ error: 'targetTenantId required' });
+    try {
+        const course = await courseService_1.default.assignCourseToTenant(courseId, targetTenantId);
+        res.status(201).json(course);
+    }
+    catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to copy course';
+        res.status(400).json({ error: message });
+    }
+};
 const deleteCourse = async (req, res) => {
     await courseService_1.default.deleteCourse(req.params.id);
     res.json({ ok: true });
@@ -221,6 +235,7 @@ exports.default = {
     listCourses,
     listGlobalCourses,
     assignCourseToTenant,
+    copyCourse,
     getCourse,
     updateCourse,
     deleteCourse,

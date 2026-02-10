@@ -22,6 +22,7 @@ router.delete('/tenants/:id', requireRoleAuth(['admin']), tenantController.delet
 router.get('/courses/global', requireRoleAuth(['admin']), courseController.listGlobalCourses)
 router.post('/courses', requireRoleAuth(['admin']), courseController.createCourse)
 router.post('/courses/assign-to-tenant', requireRoleAuth(['admin']), courseController.assignCourseToTenant)
+router.post('/courses/:courseId/copy', requireRoleAuth(['admin']), courseController.copyCourse)
 
 // tenant-specific courses (admin)
 router.post('/tenants/:tenantId/courses', requireRoleAuth(['admin']), courseController.createCourse)

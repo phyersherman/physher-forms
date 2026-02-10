@@ -217,262 +217,292 @@ const deleteCourse = async (id: string) => {
 }
 
 const assignCourseToTenant = async (globalCourseId: string, tenantId: string, overrideTitle?: string) => {
-  // Get the global course with all its structure
-  const globalCourse = await prisma.course.findUnique({
-    where: { id: globalCourseId },
-    include: {
-      chapters: {
-        include: {
-          modules: {
-            include: {
-              blocks: true
+  try {
+    // Get the global course with all its structure
+    const globalCourse = await prisma.course.findUnique({
+      where: { id: globalCourseId },
+      include: {
+        chapters: {
+          include: {
+            modules: {
+              include: {
+                blocks: true
+              }
             }
           }
         }
       }
-    }
-  })
+    })
 
-  if (!globalCourse) throw new Error('Global course not found')
-  if (globalCourse.tenant_id !== null) throw new Error('Course is not a global course')
+    if (!globalCourse) throw new Error('Global course not found')
+    if (globalCourse.tenant_id !== null) throw new Error('Course is not a global course')
 
-  // Check if already assigned
-  const existing = await prisma.course.findFirst({
-    where: {
-      global_course_id: globalCourseId,
-      tenant_id: tenantId
-    }
-  })
-  if (existing) throw new Error('Course already assigned to this tenant')
-
-  // Create new tenant-specific course
-  const newCourse = await prisma.course.create({
-    data: {
-      title: overrideTitle || globalCourse.title,
-      description: globalCourse.description,
-      tenant_id: tenantId,
-      global_course_id: globalCourseId
-    }
-  })
-
-  // Map old module IDs to new module IDs during copying
-  const moduleIdMap = new Map<string, string>()
-  const chapterIdMap = new Map<string, string>()
-
-  // Copy chapters and their content
-  for (const chapter of globalCourse.chapters) {
-    const newChapter = await prisma.chapter.create({
-      data: {
-        course_id: newCourse.id,
-        title: chapter.title,
-        order_index: chapter.order_index,
-        tenant_id: tenantId,
-        assessment_title: chapter.assessment_title || undefined,
-        assessment_required: chapter.assessment_required || false,
-        prerequisite_chapter_ids: [] // Will update after all chapters are created
+    // Check if already assigned
+    const existing = await prisma.course.findFirst({
+      where: {
+        global_course_id: globalCourseId,
+        tenant_id: tenantId
       }
     })
-    
-    chapterIdMap.set(chapter.id, newChapter.id)
+    if (existing) throw new Error('Course already assigned to this tenant')
 
-    // Copy modules in each chapter (first pass: create modules without prerequisites)
-    for (const module of chapter.modules) {
-      const newModule = await prisma.module.create({
+    console.log(`[assignCourseToTenant] Starting copy of course ${globalCourseId} to tenant ${tenantId}`)
+
+    // Create new tenant-specific course
+    const newCourse = await prisma.course.create({
+      data: {
+        title: overrideTitle || globalCourse.title,
+        description: globalCourse.description,
+        tenant_id: tenantId,
+        global_course_id: globalCourseId
+      }
+    })
+
+    console.log(`[assignCourseToTenant] Created new course ${newCourse.id}`)
+
+    // Map old module IDs to new module IDs during copying
+    const moduleIdMap = new Map<string, string>()
+    const chapterIdMap = new Map<string, string>()
+
+    // Copy chapters and their content
+    for (const chapter of globalCourse.chapters) {
+      const newChapter = await prisma.chapter.create({
         data: {
-          chapter_id: newChapter.id,
-          title: module.title,
-          slug: module.slug,
-          summary: module.summary,
-          order_index: module.order_index,
-          required: module.required,
-          prerequisite_module_ids: [], // Will update after all modules are created
-          requires_quiz_pass_to_continue: module.requires_quiz_pass_to_continue,
-          tenant_id: tenantId
+          course_id: newCourse.id,
+          title: chapter.title,
+          order_index: chapter.order_index,
+          tenant_id: tenantId,
+          assessment_title: chapter.assessment_title || undefined,
+          assessment_required: chapter.assessment_required || false,
+          prerequisite_chapter_ids: [] // Will update after all chapters are created
         }
       })
+      
+      chapterIdMap.set(chapter.id, newChapter.id)
 
-      moduleIdMap.set(module.id, newModule.id)
-
-      // Copy blocks in each module
-      for (const block of module.blocks) {
-        await prisma.block.create({
+      // Copy modules in each chapter (first pass: create modules without prerequisites)
+      for (const module of chapter.modules) {
+        const newModule = await prisma.module.create({
           data: {
-            module_id: newModule.id,
-            type: block.type,
-            content: block.content,
-            config: block.config,
-            order_index: block.order_index,
+            chapter_id: newChapter.id,
+            title: module.title,
+            slug: module.slug,
+            summary: module.summary,
+            order_index: module.order_index,
+            required: module.required,
+            prerequisite_module_ids: [], // Will update after all modules are created
+            requires_quiz_pass_to_continue: module.requires_quiz_pass_to_continue,
             tenant_id: tenantId
           }
         })
-      }
-    }
-  }
 
-  // Second pass: update prerequisites using the ID mappings
-  for (const chapter of globalCourse.chapters) {
-    const newChapterId = chapterIdMap.get(chapter.id)
-    if (!newChapterId) continue
+        moduleIdMap.set(module.id, newModule.id)
 
-    // Update chapter prerequisites - only include prerequisite chapters that exist in the copy
-    if (chapter.prerequisite_chapter_ids?.length) {
-      const remappedChapterPrereqs = chapter.prerequisite_chapter_ids
-        .map(id => chapterIdMap.get(id))
-        .filter((id): id is string => !!id)
-      
-      if (remappedChapterPrereqs.length > 0) {
-        await prisma.chapter.update({
-          where: { id: newChapterId },
-          data: { prerequisite_chapter_ids: remappedChapterPrereqs }
-        })
-      }
-    }
-
-    // Update module prerequisites
-    for (const module of chapter.modules) {
-      const newModuleId = moduleIdMap.get(module.id)
-      if (newModuleId && module.prerequisite_module_ids?.length) {
-        // Only include prerequisites that exist in the copied modules
-        const remappedModulePrereqs = module.prerequisite_module_ids
-          .map(id => moduleIdMap.get(id))
-          .filter((id): id is string => !!id)
-        
-        if (remappedModulePrereqs.length > 0) {
-          await prisma.module.update({
-            where: { id: newModuleId },
-            data: { prerequisite_module_ids: remappedModulePrereqs }
+        // Copy blocks in each module
+        for (const block of module.blocks) {
+          await prisma.block.create({
+            data: {
+              module_id: newModule.id,
+              type: block.type,
+              content: block.content,
+              config: block.config,
+              order_index: block.order_index,
+              tenant_id: tenantId
+            }
           })
         }
       }
     }
-  }
 
-  // Return the complete new course
-  return getById(newCourse.id)
+    console.log(`[assignCourseToTenant] Created ${chapterIdMap.size} chapters and ${moduleIdMap.size} modules`)
+
+    // Second pass: update prerequisites using the ID mappings
+    for (const chapter of globalCourse.chapters) {
+      const newChapterId = chapterIdMap.get(chapter.id)
+      if (!newChapterId) continue
+
+      // Update chapter prerequisites - only include prerequisite chapters that exist in the copy
+      if (chapter.prerequisite_chapter_ids?.length) {
+        const remappedChapterPrereqs = chapter.prerequisite_chapter_ids
+          .map(id => chapterIdMap.get(id))
+          .filter((id): id is string => !!id)
+        
+        if (remappedChapterPrereqs.length > 0) {
+          console.log(`[assignCourseToTenant] Updating chapter ${newChapterId} prerequisites: ${remappedChapterPrereqs}`)
+          await prisma.chapter.update({
+            where: { id: newChapterId },
+            data: { prerequisite_chapter_ids: remappedChapterPrereqs }
+          })
+        }
+      }
+
+      // Update module prerequisites
+      for (const module of chapter.modules) {
+        const newModuleId = moduleIdMap.get(module.id)
+        if (newModuleId && module.prerequisite_module_ids?.length) {
+          // Only include prerequisites that exist in the copied modules
+          const remappedModulePrereqs = module.prerequisite_module_ids
+            .map(id => moduleIdMap.get(id))
+            .filter((id): id is string => !!id)
+          
+          if (remappedModulePrereqs.length > 0) {
+            console.log(`[assignCourseToTenant] Updating module ${newModuleId} prerequisites: ${remappedModulePrereqs}`)
+            await prisma.module.update({
+              where: { id: newModuleId },
+              data: { prerequisite_module_ids: remappedModulePrereqs }
+            })
+          }
+        }
+      }
+    }
+
+    console.log(`[assignCourseToTenant] Successfully completed course copy`)
+
+    // Return the complete new course
+    return getById(newCourse.id)
+  } catch (error) {
+    console.error(`[assignCourseToTenant] Error:`, error)
+    throw error
+  }
 }
 
 const copyFromTemplate = async (templateId: string, data: { title: string; description?: string; tenant_id: string }) => {
-  // Get the template course with all its structure
-  const template = await prisma.course.findUnique({
-    where: { id: templateId },
-    include: {
-      chapters: {
-        include: {
-          modules: {
-            include: {
-              blocks: true
+  try {
+    console.log(`[copyFromTemplate] Starting copy of template ${templateId} to tenant ${data.tenant_id}`)
+    
+    // Get the template course with all its structure
+    const template = await prisma.course.findUnique({
+      where: { id: templateId },
+      include: {
+        chapters: {
+          include: {
+            modules: {
+              include: {
+                blocks: true
+              }
             }
           }
         }
       }
-    }
-  })
+    })
 
-  if (!template) throw new Error('Template not found')
+    if (!template) throw new Error('Template not found')
 
-  // Create new course in the target tenant
-  const newCourse = await prisma.course.create({
-    data: {
-      title: data.title,
-      description: data.description || null,
-      tenant_id: data.tenant_id
-    }
-  })
-
-  // Map old module IDs to new module IDs during copying
-  const moduleIdMap = new Map<string, string>()
-  const chapterIdMap = new Map<string, string>()
-
-  // Copy chapters and their content
-  for (const chapter of template.chapters) {
-    const newChapter = await prisma.chapter.create({
+    // Create new course in the target tenant
+    const newCourse = await prisma.course.create({
       data: {
-        course_id: newCourse.id,
-        title: chapter.title,
-        order_index: chapter.order_index,
-        tenant_id: data.tenant_id,
-        assessment_title: chapter.assessment_title || undefined,
-        assessment_required: chapter.assessment_required || false,
-        prerequisite_chapter_ids: [] // Will update after all chapters are created
+        title: data.title,
+        description: data.description || null,
+        tenant_id: data.tenant_id
       }
     })
-    
-    chapterIdMap.set(chapter.id, newChapter.id)
 
-    // Copy modules in each chapter (first pass: create modules without prerequisites)
-    for (const module of chapter.modules) {
-      const newModule = await prisma.module.create({
+    console.log(`[copyFromTemplate] Created new course ${newCourse.id}`)
+
+    // Map old module IDs to new module IDs during copying
+    const moduleIdMap = new Map<string, string>()
+    const chapterIdMap = new Map<string, string>()
+
+    // Copy chapters and their content
+    for (const chapter of template.chapters) {
+      const newChapter = await prisma.chapter.create({
         data: {
-          chapter_id: newChapter.id,
-          title: module.title,
-          slug: module.slug,
-          summary: module.summary,
-          order_index: module.order_index,
-          required: module.required,
-          prerequisite_module_ids: [], // Will update after all modules are created
-          requires_quiz_pass_to_continue: module.requires_quiz_pass_to_continue,
-          tenant_id: data.tenant_id
+          course_id: newCourse.id,
+          title: chapter.title,
+          order_index: chapter.order_index,
+          tenant_id: data.tenant_id,
+          assessment_title: chapter.assessment_title || undefined,
+          assessment_required: chapter.assessment_required || false,
+          prerequisite_chapter_ids: [] // Will update after all chapters are created
         }
       })
+      
+      chapterIdMap.set(chapter.id, newChapter.id)
 
-      moduleIdMap.set(module.id, newModule.id)
-
-      // Copy blocks in each module
-      for (const block of module.blocks) {
-        await prisma.block.create({
+      // Copy modules in each chapter (first pass: create modules without prerequisites)
+      for (const module of chapter.modules) {
+        const newModule = await prisma.module.create({
           data: {
-            module_id: newModule.id,
-            type: block.type,
-            content: block.content,
-            config: block.config,
-            order_index: block.order_index,
+            chapter_id: newChapter.id,
+            title: module.title,
+            slug: module.slug,
+            summary: module.summary,
+            order_index: module.order_index,
+            required: module.required,
+            prerequisite_module_ids: [], // Will update after all modules are created
+            requires_quiz_pass_to_continue: module.requires_quiz_pass_to_continue,
             tenant_id: data.tenant_id
           }
         })
-      }
-    }
-  }
 
-  // Second pass: update prerequisites using the ID mappings
-  for (const chapter of template.chapters) {
-    const newChapterId = chapterIdMap.get(chapter.id)
-    if (!newChapterId) continue
+        moduleIdMap.set(module.id, newModule.id)
 
-    // Update chapter prerequisites - only include prerequisite chapters that exist in the copy
-    if (chapter.prerequisite_chapter_ids?.length) {
-      const remappedChapterPrereqs = chapter.prerequisite_chapter_ids
-        .map(id => chapterIdMap.get(id))
-        .filter((id): id is string => !!id)
-      
-      if (remappedChapterPrereqs.length > 0) {
-        await prisma.chapter.update({
-          where: { id: newChapterId },
-          data: { prerequisite_chapter_ids: remappedChapterPrereqs }
-        })
-      }
-    }
-
-    // Update module prerequisites
-    for (const module of chapter.modules) {
-      const newModuleId = moduleIdMap.get(module.id)
-      if (newModuleId && module.prerequisite_module_ids?.length) {
-        // Only include prerequisites that exist in the copied modules
-        const remappedModulePrereqs = module.prerequisite_module_ids
-          .map(id => moduleIdMap.get(id))
-          .filter((id): id is string => !!id)
-        
-        if (remappedModulePrereqs.length > 0) {
-          await prisma.module.update({
-            where: { id: newModuleId },
-            data: { prerequisite_module_ids: remappedModulePrereqs }
+        // Copy blocks in each module
+        for (const block of module.blocks) {
+          await prisma.block.create({
+            data: {
+              module_id: newModule.id,
+              type: block.type,
+              content: block.content,
+              config: block.config,
+              order_index: block.order_index,
+              tenant_id: data.tenant_id
+            }
           })
         }
       }
     }
-  }
 
-  // Return the complete new course
-  return getById(newCourse.id)
+    console.log(`[copyFromTemplate] Created ${chapterIdMap.size} chapters and ${moduleIdMap.size} modules`)
+
+    // Second pass: update prerequisites using the ID mappings
+    for (const chapter of template.chapters) {
+      const newChapterId = chapterIdMap.get(chapter.id)
+      if (!newChapterId) continue
+
+      // Update chapter prerequisites - only include prerequisite chapters that exist in the copy
+      if (chapter.prerequisite_chapter_ids?.length) {
+        const remappedChapterPrereqs = chapter.prerequisite_chapter_ids
+          .map(id => chapterIdMap.get(id))
+          .filter((id): id is string => !!id)
+        
+        if (remappedChapterPrereqs.length > 0) {
+          console.log(`[copyFromTemplate] Updating chapter ${newChapterId} prerequisites: ${remappedChapterPrereqs}`)
+          await prisma.chapter.update({
+            where: { id: newChapterId },
+            data: { prerequisite_chapter_ids: remappedChapterPrereqs }
+          })
+        }
+      }
+
+      // Update module prerequisites
+      for (const module of chapter.modules) {
+        const newModuleId = moduleIdMap.get(module.id)
+        if (newModuleId && module.prerequisite_module_ids?.length) {
+          // Only include prerequisites that exist in the copied modules
+          const remappedModulePrereqs = module.prerequisite_module_ids
+            .map(id => moduleIdMap.get(id))
+            .filter((id): id is string => !!id)
+          
+          if (remappedModulePrereqs.length > 0) {
+            console.log(`[copyFromTemplate] Updating module ${newModuleId} prerequisites: ${remappedModulePrereqs}`)
+            await prisma.module.update({
+              where: { id: newModuleId },
+              data: { prerequisite_module_ids: remappedModulePrereqs }
+            })
+          }
+        }
+      }
+    }
+
+    console.log(`[copyFromTemplate] Successfully completed course copy`)
+
+    // Return the complete new course
+    return getById(newCourse.id)
+  } catch (error) {
+    console.error(`[copyFromTemplate] Error:`, error)
+    throw error
+  }
 }
 
 const createModule = async (data: {
