@@ -234,9 +234,8 @@ const assignCourseToTenant = async (globalCourseId: string, tenantId: string, ov
       }
     })
 
-    if (!globalCourse) throw new Error('Global course not found')
-    if (globalCourse.tenant_id !== null) throw new Error('Course is not a global course')
-
+    if (!globalCourse) throw new Error('Course not found')
+    
     // Check if already assigned
     const existing = await prisma.course.findFirst({
       where: {

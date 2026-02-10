@@ -219,9 +219,7 @@ const assignCourseToTenant = async (globalCourseId, tenantId, overrideTitle) => 
             }
         });
         if (!globalCourse)
-            throw new Error('Global course not found');
-        if (globalCourse.tenant_id !== null)
-            throw new Error('Course is not a global course');
+            throw new Error('Course not found');
         // Check if already assigned
         const existing = await client_1.default.course.findFirst({
             where: {
