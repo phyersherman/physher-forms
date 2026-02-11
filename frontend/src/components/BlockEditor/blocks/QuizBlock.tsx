@@ -17,6 +17,7 @@ interface QuizConfig {
   passingScore?: number
   attemptsAllowed?: number
   requiresPassToContinue?: boolean
+  timeLimitMinutes?: number
   questions?: QuizQuestion[]
 }
 
@@ -33,6 +34,7 @@ const QuizBlock: React.FC<BlockProps> = ({
     passingScore: 70,
     attemptsAllowed: 1,
     requiresPassToContinue: false,
+    timeLimitMinutes: undefined,
     questions: [],
   })
 
@@ -144,7 +146,7 @@ const QuizBlock: React.FC<BlockProps> = ({
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
             <div className={styles.formGroup}>
               <label>Passing Score (%)</label>
               <input
@@ -166,6 +168,19 @@ const QuizBlock: React.FC<BlockProps> = ({
                 onChange={(e) => handleConfigChange('attemptsAllowed', parseInt(e.target.value))}
                 onBlur={handleBlur}
                 min="1"
+                className={styles.input}
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Time Limit (minutes)</label>
+              <input
+                type="number"
+                value={config.timeLimitMinutes || ''}
+                onChange={(e) => handleConfigChange('timeLimitMinutes', e.target.value ? parseInt(e.target.value) : undefined)}
+                onBlur={handleBlur}
+                min="1"
+                placeholder="No limit"
                 className={styles.input}
               />
             </div>
