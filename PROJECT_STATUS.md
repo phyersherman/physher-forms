@@ -72,11 +72,11 @@ A multi-tenant LMS framework where:
 - Real-time gating based on prerequisites and quiz passing
 - Integration with gating APIs
 
-### Phase 5: Polish & Optimization (PLANNED - NEXT)
+### Phase 5: Polish & Optimization (IN PROGRESS)
 1. **Quiz Analytics** - Admin dashboard with score distributions, attempt trends, average performance
 2. **Certificate Generation** - Award certificates when courses completed with passing grade
 3. **Mobile Optimization** - Make learner view responsive for tablets/phones
-4. **Time Limits** - Add countdown timers for timed quizzes with auto-submit
+4. **Time Limits** ✅ DONE - Countdown timers for timed quizzes with auto-submit, timer shows visual warnings (green→orange→red)
 
 ## 📊 Project Structure
 
@@ -125,6 +125,8 @@ LMS/
 ```
 Branch: main
 Last commits:
+  fb00ef3 - feat: Add time limits with countdown timer and auto-submit to quizzes (Phase 5.4)
+  1c88bf1 - fix: Cascade delete blocks on module deletion and persist quiz correct answers immediately
   6215591 - Add learner course view with module gating
   89b2f0c - Add Quiz/Assignment widget with gating and completion tracking
   5f13c32 - Remove global course restriction to allow copying any course
