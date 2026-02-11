@@ -67,6 +67,10 @@ router.get('/quiz/attempts/:blockId', authGuard_1.default, quiz_controller_1.def
 router.get('/quiz/latest/:blockId', authGuard_1.default, quiz_controller_1.default.getLatestQuizAttempt);
 router.get('/modules/:moduleId/courses/:courseId/access', authGuard_1.default, quiz_controller_1.default.checkModuleAccess);
 router.post('/modules/complete', authGuard_1.default, quiz_controller_1.default.markModuleComplete);
+// quiz analytics endpoints (admin)
+router.get('/analytics/quiz/:blockId', (0, authGuard_2.requireAuth)(['admin']), quiz_controller_1.default.getQuizAnalytics);
+router.get('/analytics/course/:courseId/quizzes', (0, authGuard_2.requireAuth)(['admin']), quiz_controller_1.default.getCourseQuizAnalytics);
+router.get('/analytics/quiz/:blockId/top-performers', (0, authGuard_2.requireAuth)(['admin']), quiz_controller_1.default.getTopPerformers);
 // auth
 router.post('/auth/login', authController_1.default.login);
 router.post('/auth/register', authController_1.default.register);

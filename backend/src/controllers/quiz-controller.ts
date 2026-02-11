@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import quizService from '../services/quiz-service'
+import quizAnalyticsService from '../services/quiz-analytics-service'
 
 const submitQuizAttempt = async (req: Request, res: Response) => {
   try {
@@ -117,10 +118,78 @@ const getLatestQuizAttempt = async (req: Request, res: Response) => {
   }
 }
 
+const getQuizAnalytics = async (req: Request, res: Response) => {
+  try {
+    const blockId = req.params.blockId as string
+    const courseId = req.query.courseId as string
+    const tenantId = req.user?.tenantId as string
+    const daysBack = req.query.daysBack ? parseInt(req.query.daysBack as string) : 30
+
+    if (!blockId || !courseId || !tenantId) {
+      return res.status(400).json({
+        error: 'blockId, courseId, and tenantId are required',
+      })
+    }
+
+    const analytics = await quizAnalyticsService.getQuizAnalytics(blockId, tenantId, courseId, daysBack)
+    res.json(analytics)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to get quiz analytics'
+    console.error('[getQuizAnalytics]', message)
+    res.status(400).json({ error: message })
+  }
+}
+
+const getCourseQuizAnalytics = async (req: Request, res: Response) => {
+  try {
+    const courseId = req.params.courseId as string
+    const tenantId = req.user?.tenantId as string
+    const daysBack = req.query.daysBack ? parseInt(req.query.daysBack as string) : 30
+
+    if (!courseId || !tenantId) {
+      return res.status(400).json({
+        error: 'courseId and tenantId are required',
+      })
+    }
+
+    const analytics = await quizAnalyticsService.getCourseQuizAnalytics(courseId, tenantId, daysBack)
+    res.json(analytics)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to get course quiz analytics'
+    console.error('[getCourseQuizAnalytics]', message)
+    res.status(400).json({ error: message })
+  }
+}
+
+const getTopPerformers = async (req: Request, res: Response) => {
+  try {
+    const blockId = req.params.blockId as string
+    const courseId = req.query.courseId as string
+    const tenantId = req.user?.tenantId as string
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10
+
+    if (!blockId || !courseId || !tenantId) {
+      return res.status(400).json({
+        error: 'blockId, courseId, and tenantId are required',
+      })
+    }
+
+    const performers = await quizAnalyticsService.getTopPerformers(blockId, tenantId, courseId, limit)
+    res.json(performers)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to get top performers'
+    console.error('[getTopPerformers]', message)
+    res.status(400).json({ error: message })
+  }
+}
+
 export default {
   submitQuizAttempt,
   checkModuleAccess,
   markModuleComplete,
   getQuizAttempts,
   getLatestQuizAttempt,
+  getQuizAnalytics,
+  getCourseQuizAnalytics,
+  getTopPerformers,
 }

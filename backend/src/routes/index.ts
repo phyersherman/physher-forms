@@ -76,6 +76,11 @@ router.get('/quiz/latest/:blockId', requireAuth, quizController.getLatestQuizAtt
 router.get('/modules/:moduleId/courses/:courseId/access', requireAuth, quizController.checkModuleAccess)
 router.post('/modules/complete', requireAuth, quizController.markModuleComplete)
 
+// quiz analytics endpoints (admin)
+router.get('/analytics/quiz/:blockId', requireRoleAuth(['admin']), quizController.getQuizAnalytics)
+router.get('/analytics/course/:courseId/quizzes', requireRoleAuth(['admin']), quizController.getCourseQuizAnalytics)
+router.get('/analytics/quiz/:blockId/top-performers', requireRoleAuth(['admin']), quizController.getTopPerformers)
+
 // auth
 router.post('/auth/login', authController.login)
 router.post('/auth/register', authController.register)

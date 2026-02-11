@@ -152,6 +152,23 @@ const EditCoursePage: React.FC = () => {
 
   return (
     <AdminLayout title={pageTitle}>
+      <div style={{ marginBottom: '16px', display: 'flex', gap: '8px' }}>
+        <button
+          onClick={() => router.push(`/admin/courses/${courseId}/analytics`)}
+          style={{
+            padding: '8px 16px',
+            background: '#1976d2',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontWeight: 600,
+            fontSize: '14px',
+          }}
+        >
+          📊 View Analytics
+        </button>
+      </div>
       <CourseEditor
         mode="edit"
         entityType="course"
