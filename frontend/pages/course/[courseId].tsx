@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
+import QuizBlockDisplay from '../../src/components/BlockEditor/blocks/QuizBlockDisplay'
 import styles from '../../styles/admin-dashboard.module.css'
 
 interface Module {
@@ -272,7 +273,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ courseId, moduleId, onModuleSel
 
       <div style={{ marginBottom: '24px' }}>
         {module.blocks && module.blocks.length > 0 ? (
-          module.blocks.map((block, idx) => (
+          module.blocks.map((block) => (
             <BlockRenderer key={block.id} block={block} courseId={courseId} />
           ))
         ) : (
@@ -342,14 +343,8 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block, courseId }) => {
 
   if (block.type === 'quiz') {
     return (
-      <div style={{ marginBottom: '20px' }}>
-        {/* QuizBlockDisplay would be imported here */}
-        <div style={{ padding: '20px', background: '#f0f4ff', borderRadius: '8px' }}>
-          <p style={{ color: '#333', fontWeight: 600 }}>📋 Quiz/Assignment</p>
-          <p style={{ color: '#666', fontSize: '13px' }}>
-            This module contains a quiz. Answer the questions to proceed.
-          </p>
-        </div>
+      <div key={block.id} style={{ marginBottom: '20px' }}>
+        <QuizBlockDisplay block={block as any} />
       </div>
     )
   }

@@ -72,24 +72,11 @@ A multi-tenant LMS framework where:
 - Real-time gating based on prerequisites and quiz passing
 - Integration with gating APIs
 
-### Phase 5: Polish & Optimization (PENDING)
-1. **Quiz improvements**:
-   - Time-limit enforcement for quizzes
-   - Partial credit calculation
-   - Quiz review mode showing correct answers
-   - Feedback customization per question
-
-2. **Learner experience**:
-   - Progress bar showing course completion percentage
-   - Certificate generation when course completed
-   - Discussion/comments on modules (optional future feature)
-   - Mobile-friendly responsive design
-
-3. **Admin features**:
-   - Quiz attempt analytics (score distribution, average time)
-   - Student progress dashboard
-   - Bulk enrollment
-   - Course completion reports
+### Phase 5: Polish & Optimization (PLANNED - NEXT)
+1. **Quiz Analytics** - Admin dashboard with score distributions, attempt trends, average performance
+2. **Certificate Generation** - Award certificates when courses completed with passing grade
+3. **Mobile Optimization** - Make learner view responsive for tablets/phones
+4. **Time Limits** - Add countdown timers for timed quizzes with auto-submit
 
 ## 📊 Project Structure
 
