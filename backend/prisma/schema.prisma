@@ -167,6 +167,27 @@ model Enrollment {
   enrolledAt DateTime @default(now())
 }
 
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  blockId     String   // Which quiz block was attempted
+  userId      String
+  tenantId    String
+  courseId    String
+  score       Float    // Score as percentage (0-100)
+  passed      Boolean  // Whether score >= passing_score
+  answers     String   // JSON: { questionId: answer }
+  submittedAt DateTime @default(now())
+}
+
+model ModuleCompletion {
+  id          String   @id @default(cuid())
+  moduleId    String
+  userId      String
+  tenantId    String
+  courseId    String
+  completedAt DateTime @default(now())
+}
+
 model RefreshToken {
   id        String   @id @default(cuid())
   token     String   @unique

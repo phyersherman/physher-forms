@@ -10,6 +10,7 @@ const authGuard_1 = __importDefault(require("../middleware/authGuard"));
 const authGuard_2 = require("../middleware/authGuard");
 const courseController_1 = __importDefault(require("../controllers/courseController"));
 const courseTemplateController_1 = __importDefault(require("../controllers/courseTemplateController"));
+const quiz_controller_1 = __importDefault(require("../controllers/quiz-controller"));
 const router = (0, express_1.Router)();
 router.get('/health', (_req, res) => res.json({ ok: true }));
 // tenant management (admin)
@@ -60,6 +61,12 @@ router.get('/modules/:moduleId/blocks', (0, authGuard_2.requireAuth)(['admin']),
 router.post('/modules/:moduleId/blocks/reorder', (0, authGuard_2.requireAuth)(['admin']), courseController_1.default.reorderBlocks);
 router.put('/blocks/:blockId', (0, authGuard_2.requireAuth)(['admin']), courseController_1.default.updateBlock);
 router.delete('/blocks/:blockId', (0, authGuard_2.requireAuth)(['admin']), courseController_1.default.deleteBlock);
+// quiz endpoints (learner-facing)
+router.post('/quiz/submit', authGuard_1.default, quiz_controller_1.default.submitQuizAttempt);
+router.get('/quiz/attempts/:blockId', authGuard_1.default, quiz_controller_1.default.getQuizAttempts);
+router.get('/quiz/latest/:blockId', authGuard_1.default, quiz_controller_1.default.getLatestQuizAttempt);
+router.get('/modules/:moduleId/courses/:courseId/access', authGuard_1.default, quiz_controller_1.default.checkModuleAccess);
+router.post('/modules/complete', authGuard_1.default, quiz_controller_1.default.markModuleComplete);
 // auth
 router.post('/auth/login', authController_1.default.login);
 router.post('/auth/register', authController_1.default.register);

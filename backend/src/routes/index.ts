@@ -5,6 +5,7 @@ import requireAuth from '../middleware/authGuard'
 import { requireAuth as requireRoleAuth } from '../middleware/authGuard'
 import courseController from '../controllers/courseController'
 import courseTemplateController from '../controllers/courseTemplateController'
+import quizController from '../controllers/quiz-controller'
 import { Request, Response } from 'express'
 
 const router = Router()
@@ -67,6 +68,13 @@ router.get('/modules/:moduleId/blocks', requireRoleAuth(['admin']), courseContro
 router.post('/modules/:moduleId/blocks/reorder', requireRoleAuth(['admin']), courseController.reorderBlocks)
 router.put('/blocks/:blockId', requireRoleAuth(['admin']), courseController.updateBlock)
 router.delete('/blocks/:blockId', requireRoleAuth(['admin']), courseController.deleteBlock)
+
+// quiz endpoints (learner-facing)
+router.post('/quiz/submit', requireAuth, quizController.submitQuizAttempt)
+router.get('/quiz/attempts/:blockId', requireAuth, quizController.getQuizAttempts)
+router.get('/quiz/latest/:blockId', requireAuth, quizController.getLatestQuizAttempt)
+router.get('/modules/:moduleId/courses/:courseId/access', requireAuth, quizController.checkModuleAccess)
+router.post('/modules/complete', requireAuth, quizController.markModuleComplete)
 
 // auth
 router.post('/auth/login', authController.login)
