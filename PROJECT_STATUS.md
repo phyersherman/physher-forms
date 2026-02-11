@@ -1,6 +1,6 @@
 # LMS Project Status
 
-**Last Updated:** February 7, 2026  
+**Last Updated:** February 11, 2026  
 **Project:** Multi-tenant, white-label LMS (Node.js/Next.js)  
 **Location:** `/Users/hubby/Library/CloudStorage/OneDrive-SharedLibraries-RheapData/Company Files - Documents/LMS`
 
@@ -32,36 +32,64 @@ A multi-tenant LMS framework where:
 
 ## 🚀 Next Steps (Planned)
 
-### Phase 3: Editor Improvements (IN PROGRESS)
-1. **Rich Text Editor** - Replace basic textarea with full formatting (bold, italic, links, lists) ✅ DONE
+### Phase 3: Editor Improvements (COMPLETED ✅)
+1. **Rich Text Editor** - Replace basic textarea with full formatting ✅ DONE
    - Implemented using Tiptap (@tiptap/react, @tiptap/starter-kit)
-   - Features: Bold, Italic, Strikethrough, Headings (H1, H2), Paragraph, Bullet Lists, Ordered Lists, Blockquotes, Code Blocks
-   - Custom toolbar with visual formatting buttons
-   - Proper styling and integration with existing editor layout
-   - Client-side rendering with no SSR issues
+   - Features: Bold, Italic, Strikethrough, Headings (H1, H2), Lists, Blockquotes, Code Blocks
 
 2. **Enhanced Blocks** ✅ DONE
-   - **Quote Block**: 
-     - Attribution/author field
-     - Configurable text color, border color, background color
-     - Live preview with formatted quote
-   - **Button Block**: 
-     - URL/link destination
-     - Configurable size (small, medium, large), alignment (left, center, right)
-     - Customizable button and text colors
-     - Open in new tab option
-     - Live preview with hover effects
-   - Both blocks have editor and display components integrated into the lesson editor
+   - **Quote Block**: Attribution, color customization, live preview
+   - **Button Block**: URL, sizing, alignment, colors, new tab option
 
-3. **Editor Layout Reorganization** (PENDING)
-   - Goal: Move chapter list to sidebar, expand module editor
-   - Note: Deferred for cleaner implementation in future phase
+3. **Course Copy/Assignment** ✅ DONE
+   - Copy courses between tenants with full structure preservation
+   - Automatic ID remapping for chapters, modules, and prerequisites
+   - UI modal for selecting target tenant
 
-### Phase 4: Learner Experience (PENDING)
-1. **Learner-facing frontend** - Separate interface for consuming courses
-2. **Preview feature** - Built into editor so admins see learner view
-3. **Course gating** - Quiz/assignment completion gates
-4. **Module prerequisites** - Lock modules until prerequisites complete
+### Phase 4: Learner Experience (IN PROGRESS)
+
+#### 4.1 **Quiz/Assignment Widgets** ✅ DONE
+- Admin interface to create quiz questions (multiple choice, true/false, short answer)
+- Question editing, point assignment, passing score configuration
+- Learner-facing quiz interface with answer validation
+- **Gating & Completion Tracking**:
+  - `QuizAttempt` model tracks submissions, scores, and answers
+  - `ModuleCompletion` model tracks module progress
+  - Module-level gating: `requires_quiz_pass_to_continue` flag
+  - Prerequisite enforcement: `prerequisite_module_ids` support
+- **Backend APIs**:
+  - `POST /quiz/submit` - Submit quiz and get score
+  - `GET /quiz/attempts/:blockId` - View all quiz attempts
+  - `GET /quiz/latest/:blockId` - Get latest attempt
+  - `GET /modules/:moduleId/courses/:courseId/access` - Check module access
+  - `POST /modules/complete` - Mark module as complete
+
+#### 4.2 **Learner Course View** ✅ DONE
+- New page at `/course/[courseId]` for learners to browse courses
+- Left sidebar showing course structure (chapters → modules)
+- Module access control with lock icons and reason messages
+- Block rendering for all types (text, images, videos, quotes, buttons)
+- Real-time gating based on prerequisites and quiz passing
+- Integration with gating APIs
+
+### Phase 5: Polish & Optimization (PENDING)
+1. **Quiz improvements**:
+   - Time-limit enforcement for quizzes
+   - Partial credit calculation
+   - Quiz review mode showing correct answers
+   - Feedback customization per question
+
+2. **Learner experience**:
+   - Progress bar showing course completion percentage
+   - Certificate generation when course completed
+   - Discussion/comments on modules (optional future feature)
+   - Mobile-friendly responsive design
+
+3. **Admin features**:
+   - Quiz attempt analytics (score distribution, average time)
+   - Student progress dashboard
+   - Bulk enrollment
+   - Course completion reports
 
 ## 📊 Project Structure
 
@@ -110,8 +138,10 @@ LMS/
 ```
 Branch: main
 Last commits:
-  9ef77cd - Add git workflow documentation
-  286c94e - Initial commit - Multi-tenant LMS with working editor layout
+  6215591 - Add learner course view with module gating
+  89b2f0c - Add Quiz/Assignment widget with gating and completion tracking
+  5f13c32 - Remove global course restriction to allow copying any course
+  8aeae8f - Add course copy endpoint and comprehensive logging
 ```
 
 To view more: `git log --oneline -10`
