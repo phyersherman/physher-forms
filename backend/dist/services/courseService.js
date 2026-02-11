@@ -119,6 +119,9 @@ const updateCourse = async (id, data) => {
                 // Delete modules not in incoming data
                 const modulesToDelete = existingModules.filter(m => !incomingModuleIds.has(m.id));
                 for (const mod of modulesToDelete) {
+                    // First delete all blocks in this module
+                    await client_1.default.block.deleteMany({ where: { module_id: mod.id } });
+                    // Then delete the module
                     await client_1.default.module.delete({ where: { id: mod.id } });
                 }
                 // Upsert modules

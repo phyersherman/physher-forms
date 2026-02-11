@@ -70,6 +70,7 @@ const QuizBlock: React.FC<BlockProps> = ({
       questions: [...(config.questions || []), newQuestion],
     }
     setConfig(newConfig)
+    onUpdate({ config: JSON.stringify(newConfig) })
   }
 
   const updateQuestion = (qId: string, updates: Partial<QuizQuestion>) => {
@@ -78,12 +79,15 @@ const QuizBlock: React.FC<BlockProps> = ({
     )
     const newConfig = { ...config, questions: newQuestions }
     setConfig(newConfig)
+    // Save immediately when updating questions to ensure all changes persist
+    onUpdate({ config: JSON.stringify(newConfig) })
   }
 
   const deleteQuestion = (qId: string) => {
     const newQuestions = (config.questions || []).filter(q => q.id !== qId)
     const newConfig = { ...config, questions: newQuestions }
     setConfig(newConfig)
+    onUpdate({ config: JSON.stringify(newConfig) })
   }
 
   const addOption = (qId: string) => {
@@ -253,7 +257,6 @@ const QuizBlock: React.FC<BlockProps> = ({
                             name={`correct-${question.id}`}
                             checked={question.correctAnswer === option}
                             onChange={() => updateQuestion(question.id, { correctAnswer: option })}
-                            onBlur={handleBlur}
                           />
                           Correct
                         </label>

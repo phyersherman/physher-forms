@@ -128,6 +128,9 @@ const updateCourse = async (id: string, data: { title?: string; description?: st
         // Delete modules not in incoming data
         const modulesToDelete = existingModules.filter(m => !incomingModuleIds.has(m.id))
         for (const mod of modulesToDelete) {
+          // First delete all blocks in this module
+          await prisma.block.deleteMany({ where: { module_id: mod.id } })
+          // Then delete the module
           await prisma.module.delete({ where: { id: mod.id } })
         }
 

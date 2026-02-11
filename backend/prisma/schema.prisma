@@ -131,7 +131,7 @@ model TemplateModuleBlock {
 model Block {
   id          String   @id @default(cuid())
   module_id   String
-  module      Module   @relation(fields: [module_id], references: [id])
+  module      Module   @relation(fields: [module_id], references: [id], onDelete: Cascade)
   type        String   // e.g., "text", "image", "video", "quiz", "assignment"
   content     String?  // HTML/markdown for text, URL for media, etc.
   config      String?  // JSON for quiz/assignment config
