@@ -73,7 +73,13 @@ A multi-tenant LMS framework where:
 - Integration with gating APIs
 
 ### Phase 5: Polish & Optimization (IN PROGRESS)
-1. **Quiz Analytics** - Admin dashboard with score distributions, attempt trends, average performance
+1. **Quiz Analytics** ✅ DONE - Admin dashboard with:
+   - Score statistics (min, max, avg, median, standard deviation)
+   - Pass/fail breakdown with visual bar chart
+   - Score distribution histogram (by 10% intervals)
+   - Attempt trends over time with dates and pass rates
+   - Top performers list
+   - Accessible from course editor via "📊 View Analytics" button
 2. **Certificate Generation** - Award certificates when courses completed with passing grade
 3. **Mobile Optimization** - Make learner view responsive for tablets/phones
 4. **Time Limits** ✅ DONE - Countdown timers for timed quizzes with auto-submit, timer shows visual warnings (green→orange→red)
@@ -125,12 +131,12 @@ LMS/
 ```
 Branch: main
 Last commits:
+  065bfec - feat: Implement quiz analytics dashboard with score distributions and attempt trends (Phase 5.1)
+  e576404 - docs: Update project status - Phase 5.4 Time Limits complete
   fb00ef3 - feat: Add time limits with countdown timer and auto-submit to quizzes (Phase 5.4)
   1c88bf1 - fix: Cascade delete blocks on module deletion and persist quiz correct answers immediately
   6215591 - Add learner course view with module gating
   89b2f0c - Add Quiz/Assignment widget with gating and completion tracking
-  5f13c32 - Remove global course restriction to allow copying any course
-  8aeae8f - Add course copy endpoint and comprehensive logging
 ```
 
 To view more: `git log --oneline -10`
