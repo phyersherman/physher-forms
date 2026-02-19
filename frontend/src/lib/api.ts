@@ -118,6 +118,30 @@ export async function logout() {
   return fetchJson('/auth/logout', { method: 'POST' })
 }
 
+export async function acceptInvite(token: string, password: string) {
+  return fetchJson('/auth/accept-invite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  })
+}
+
+export async function forgotPassword(email: string) {
+  return fetchJson('/auth/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+}
+
+export async function resetPassword(token: string, password: string) {
+  return fetchJson('/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  })
+}
+
 // Tenant management
 export async function getTenants() {
   return fetchJson('/tenants', { method: 'GET' })
@@ -319,6 +343,9 @@ export async function getAnalyticsTenantCourses(tenantId?: string) {
 export default { 
   login, 
   logout,
+  acceptInvite,
+  forgotPassword,
+  resetPassword,
   me, 
   refreshCsrf, 
   refresh,
