@@ -4,14 +4,10 @@ import { useBlockContent } from '../hooks/useBlockContent'
 import { useBlockConfig } from '../hooks/useBlockConfig'
 import { FormInput } from './FormComponents'
 import { BlockWrapper } from './BlockWrapper'
+import { VideoConfig, DEFAULT_VIDEO_CONFIG } from '../../../constants/block-defaults'
 
-interface VideoConfig {
-  title?: string
-}
-
-const DEFAULT_CONFIG: VideoConfig = {
-  title: '',
-}
+// Alias for consistency with rest of code
+const DEFAULT_CONFIG = DEFAULT_VIDEO_CONFIG
 
 const VideoBlock: React.FC<BlockProps> = ({
   block,

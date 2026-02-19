@@ -5,36 +5,12 @@ import { useBlockConfig } from '../hooks/useBlockConfig'
 import { useBlockContent } from '../hooks/useBlockContent'
 import { FormInput, FormSelect, FormColorInput } from './FormComponents'
 import { BlockWrapper } from './BlockWrapper'
-
-interface ButtonConfig {
-  url?: string
-  alignment?: 'left' | 'center' | 'right'
-  backgroundColor?: string
-  textColor?: string
-  size?: 'small' | 'medium' | 'large'
-  openInNewTab?: boolean
-}
-
-const DEFAULT_BUTTON_CONFIG: ButtonConfig = {
-  url: '',
-  alignment: 'left',
-  backgroundColor: '#0ea5a4',
-  textColor: '#ffffff',
-  size: 'medium',
-  openInNewTab: true,
-}
-
-const BUTTON_SIZE_MAP = {
-  small: '12px',
-  medium: '16px',
-  large: '20px',
-}
-
-const BUTTON_PADDING_MAP = {
-  small: '8px 16px',
-  medium: '12px 24px',
-  large: '16px 32px',
-}
+import {
+  ButtonConfig,
+  DEFAULT_BUTTON_CONFIG,
+  BUTTON_SIZE_MAP,
+  BUTTON_PADDING_MAP,
+} from '../../../constants/block-defaults'
 
 const ButtonBlock: React.FC<BlockProps> = ({
   block,

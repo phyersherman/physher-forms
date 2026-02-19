@@ -4,14 +4,10 @@ import { useBlockContent } from '../hooks/useBlockContent'
 import { useBlockConfig } from '../hooks/useBlockConfig'
 import { FormInput } from './FormComponents'
 import { BlockWrapper } from './BlockWrapper'
+import { ImageConfig, DEFAULT_IMAGE_CONFIG } from '../../../constants/block-defaults'
 
-interface ImageConfig {
-  altText?: string
-}
-
-const DEFAULT_CONFIG: ImageConfig = {
-  altText: '',
-}
+// Alias for consistency with rest of code
+const DEFAULT_CONFIG = DEFAULT_IMAGE_CONFIG
 
 const ImageBlock: React.FC<BlockProps> = ({
   block,

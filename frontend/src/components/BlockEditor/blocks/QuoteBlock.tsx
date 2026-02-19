@@ -1,24 +1,14 @@
 import React from 'react'
-import { IBlock, BlockProps } from '../types'
+import { BlockProps } from '../types'
 import { useBlockContent } from '../hooks/useBlockContent'
 import { useBlockConfig } from '../hooks/useBlockConfig'
 import { FormTextarea, FormInput, FormColorInput } from './FormComponents'
 import { BlockWrapper } from './BlockWrapper'
 import styles from './blocks.module.css'
+import { QuoteConfig, DEFAULT_QUOTE_CONFIG } from '../../../constants/block-defaults'
 
-interface QuoteConfig {
-  attribution?: string
-  textColor?: string
-  borderColor?: string
-  backgroundColor?: string
-}
-
-const DEFAULT_CONFIG: QuoteConfig = {
-  attribution: '',
-  textColor: '#333',
-  borderColor: '#0ea5a4',
-  backgroundColor: '#f9fffe',
-}
+// Alias for consistency with rest of code
+const DEFAULT_CONFIG = DEFAULT_QUOTE_CONFIG
 
 const QuoteBlock: React.FC<BlockProps> = ({
   block,

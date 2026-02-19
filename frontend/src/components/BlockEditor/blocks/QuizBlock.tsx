@@ -4,35 +4,11 @@ import styles from './blocks.module.css'
 import { useBlockConfig } from '../hooks/useBlockConfig'
 import { FormInput, FormSelect, FormColorInput } from './FormComponents'
 import { BlockWrapper } from './BlockWrapper'
-
-interface QuizQuestion {
-  id: string
-  text: string
-  type: 'multiple-choice' | 'true-false' | 'short-answer'
-  options?: string[]
-  correctAnswer?: string | string[]
-  points?: number
-}
-
-interface QuizConfig {
-  title?: string
-  description?: string
-  passingScore?: number
-  attemptsAllowed?: number
-  requiresPassToContinue?: boolean
-  timeLimitMinutes?: number
-  questions?: QuizQuestion[]
-}
-
-const DEFAULT_QUIZ_CONFIG: QuizConfig = {
-  title: '',
-  description: '',
-  passingScore: 70,
-  attemptsAllowed: 1,
-  requiresPassToContinue: false,
-  timeLimitMinutes: undefined,
-  questions: [],
-}
+import {
+  QuizQuestion,
+  QuizConfig,
+  DEFAULT_QUIZ_CONFIG,
+} from '../../../constants/block-defaults'
 
 const QuizBlock: React.FC<BlockProps> = ({
   block,
