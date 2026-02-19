@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import tenantController from '../controllers/tenantController'
 import authController from '../controllers/authController'
+import * as userController from '../controllers/userController'
 import requireAuth from '../middleware/authGuard'
 import { requireAuth as requireRoleAuth } from '../middleware/authGuard'
 import courseController from '../controllers/courseController'
@@ -18,6 +19,18 @@ router.get('/tenants/:id', requireRoleAuth(['admin']), tenantController.getTenan
 router.post('/tenants', requireRoleAuth(['admin']), tenantController.createTenant)
 router.put('/tenants/:id', requireRoleAuth(['admin']), tenantController.updateTenant)
 router.delete('/tenants/:id', requireRoleAuth(['admin']), tenantController.deleteTenant)
+
+// user management (admin) - tenant-scoped
+router.get('/tenants/:tenantId/users', requireRoleAuth(['admin']), userController.listUsers)
+router.get('/tenants/:tenantId/users/:userId', requireRoleAuth(['admin']), userController.getUser)
+router.post('/tenants/:tenantId/users', requireRoleAuth(['admin']), userController.createUser)
+router.put('/tenants/:tenantId/users/:userId', requireRoleAuth(['admin']), userController.updateUser)
+router.delete('/tenants/:tenantId/users/:userId', requireRoleAuth(['admin']), userController.deleteUser)
+router.post('/tenants/:tenantId/users/:userId/disable', requireRoleAuth(['admin']), userController.disableUser)
+router.post('/tenants/:tenantId/users/:userId/enable', requireRoleAuth(['admin']), userController.enableUser)
+
+// user self-service (any authenticated user)
+router.post('/users/:userId/password', requireAuth, userController.changePassword)
 
 // global courses (admin - available across all tenants)
 router.get('/courses/global', requireRoleAuth(['admin']), courseController.listGlobalCourses)
