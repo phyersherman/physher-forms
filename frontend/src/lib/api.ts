@@ -147,6 +147,64 @@ export async function deleteTenant(tenantId: string) {
   return fetchJson(`/tenants/${tenantId}`, { method: 'DELETE' })
 }
 
+// User management
+export async function getUsers(tenantId: string) {
+  return fetchJson(`/tenants/${tenantId}/users`, { method: 'GET' })
+}
+
+export async function getUser(tenantId: string, userId: string) {
+  return fetchJson(`/tenants/${tenantId}/users/${userId}`, { method: 'GET' })
+}
+
+export async function createUser(tenantId: string, data: { 
+  email: string
+  fullName?: string
+  role: string
+  password?: string
+}) {
+  return fetchJson(`/tenants/${tenantId}/users`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateUser(tenantId: string, userId: string, data: {
+  fullName?: string
+  role?: string
+  email?: string
+}) {
+  return fetchJson(`/tenants/${tenantId}/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteUser(tenantId: string, userId: string) {
+  return fetchJson(`/tenants/${tenantId}/users/${userId}`, { method: 'DELETE' })
+}
+
+export async function disableUser(tenantId: string, userId: string) {
+  return fetchJson(`/tenants/${tenantId}/users/${userId}/disable`, { method: 'POST' })
+}
+
+export async function enableUser(tenantId: string, userId: string) {
+  return fetchJson(`/tenants/${tenantId}/users/${userId}/enable`, { method: 'POST' })
+}
+
+export async function inviteUser(tenantId: string, userId: string) {
+  return fetchJson(`/tenants/${tenantId}/users/${userId}/invite`, { method: 'POST' })
+}
+
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  return fetchJson(`/users/${userId}/password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+}
+
 // Learner APIs
 export async function getModuleAccess(moduleId: string, courseId: string) {
   return fetchJson(`/modules/${moduleId}/courses/${courseId}/access`, { method: 'GET' })
@@ -211,6 +269,16 @@ export default {
   createTenant,
   updateTenant,
   deleteTenant,
+  // User management
+  getUsers,
+  getUser,
+  createUser,
+  updateUser,
+  deleteUser,
+  disableUser,
+  enableUser,
+  inviteUser,
+  changePassword,
   // Learner APIs
   getModuleAccess,
   getModule,
