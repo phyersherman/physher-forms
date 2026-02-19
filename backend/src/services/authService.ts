@@ -34,11 +34,26 @@ const createRefreshToken = async (userId: string, days = 30) => {
   return { token, expiresAt }
 }
 
-const authenticate = async (email: string, password: string) => {
-  const user = await prisma.user.findUnique({ where: { email } })
+const authenticate = async (email: string, password: string, tenantId?: string) => {
+  // If tenantId provided, use compound unique lookup
+  // Otherwise, find first matching email (backward compatibility)
+  const user = tenantId 
+    ? await prisma.user.findUnique({ where: { email_tenantId: { email, tenantId } } })
+    : await prisma.user.findFirst({ where: { email } })
+  
   if (!user || !user.password) return null
+  
+  // Check if user is disabled
+  if (user.status === 'disabled') return null
+  
   const ok = await bcrypt.compare(password, user.password)
   if (!ok) return null
+
+  // Update last login timestamp
+  await prisma.user.update({ 
+    where: { id: user.id }, 
+    data: { lastLoginAt: new Date() } 
+  })
 
   const accessToken = createAccessToken(user)
   const refresh = await createRefreshToken(user.id)

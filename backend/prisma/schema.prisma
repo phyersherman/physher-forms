@@ -8,14 +8,14 @@ datasource db {
 }
 
 model Tenant {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   name           String
   defaultLocale  String
   primaryColor   String?
   secondaryColor String?
   logoUrl        String?
-  is_template    Boolean  @default(false)
-  createdAt      DateTime @default(now())
+  is_template    Boolean       @default(false)
+  createdAt      DateTime      @default(now())
   domains        Domain[]
   users          User[]
   courses        Course[]
@@ -23,6 +23,7 @@ model Tenant {
   modules        Module[]
   blocks         Block[]
   quizWidgets    QuizWidget[]
+  emailConfigs   EmailConfig[]
 }
 
 model Domain {
@@ -35,13 +36,23 @@ model Domain {
 
 model User {
   id            String         @id @default(cuid())
-  email         String         @unique
+  email         String
   password      String?
   fullName      String?
-  role          String
+  role          String         @default("learner")
   tenantId      String
+  status        String         @default("active")  // "active" | "invited" | "disabled"
+  inviteToken   String?        @unique
+  inviteExpires DateTime?
+  resetToken    String?        @unique
+  resetExpires  DateTime?
+  lastLoginAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   tenant        Tenant         @relation(fields: [tenantId], references: [id])
   refreshTokens RefreshToken[]
+
+  @@unique([email, tenantId])
 }
 
 model Course {
@@ -198,4 +209,31 @@ model RefreshToken {
   revoked   Boolean  @default(false)
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model EmailConfig {
+  id           String   @id @default(cuid())
+  tenantId     String?  @unique  // null = global config
+  provider     String   @default("mailgun")  // future: sendgrid, ses
+  apiKey       String   // encrypted at rest
+  domain       String   // mailgun sending domain
+  fromEmail    String   // noreply@example.com
+  fromName     String   // "Acme LMS"
+  replyToEmail String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+}
+
+model EmailLog {
+  id             String   @id @default(cuid())
+  tenantId       String?
+  recipientEmail String
+  subject        String
+  templateName   String   // "invite", "welcome", "reset"
+  status         String   @default("sent")  // "sent" | "failed" | "bounced"
+  providerMsgId  String?  // mailgun message ID
+  errorMessage   String?
+  sentAt         DateTime @default(now())
 }

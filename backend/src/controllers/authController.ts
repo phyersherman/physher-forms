@@ -15,7 +15,9 @@ function cookieOptions(maxAgeDays: number) {
 const login = async (req: Request, res: Response) => {
   const { email, password } = req.body
   if (!email || !password) return res.status(400).json({ error: 'email and password required' })
-  const result = await authService.authenticate(email, password)
+  
+  // Pass tenantId from tenantResolver middleware (if available)
+  const result = await authService.authenticate(email, password, req.tenantId)
   if (!result) return res.status(401).json({ error: 'invalid credentials' })
 
   const accessToken = result.accessToken
