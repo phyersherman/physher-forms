@@ -84,12 +84,15 @@ A multi-tenant LMS framework where:
 3. **Mobile Optimization** - Make learner view responsive for tablets/phones
 4. **Time Limits** ✅ DONE - Countdown timers for timed quizzes with auto-submit, timer shows visual warnings (green→orange→red)
 
-### Phase 6: Code Cleanup & Optimization (PLANNED)
-1. **API Client Completion** 🔴 HIGH PRIORITY
-   - Migrate all direct `fetch()` calls to use centralized `frontend/src/lib/api.ts` client
-   - Add missing methods: `getTenants()`, `createTenant()`, `updateTenant()`, `deleteTenant()`
-   - Add learner APIs: `getModuleAccess()`, `submitQuiz()`, `checkModuleCompletion()`, `getAnalytics()`
-   - Benefit: Consistent CSRF handling, retry logic, error handling, and centralized URL configuration
+### Phase 6: Code Cleanup & Optimization (IN PROGRESS)
+1. **API Client Completion** ✅ DONE - Centralized API client now covers all endpoints
+   - All direct `fetch()` calls migrated to use api.ts client
+   - Added methods: getTenants(), getTenant(), createTenant(), updateTenant(), deleteTenant()
+   - Added learner APIs: getModule(), getModuleAccess(), completeModule(), submitQuiz(), getQuizAttempts(), getLatestQuizAttempt()
+   - Added analytics APIs: getAnalyticsAdmin(), getAnalyticsTenantCourses()
+   - Updated 11 frontend pages to use centralized client
+   - Benefit: Consistent CSRF handling, automatic token refresh on 401, centralized error handling, easier API URL configuration
+   - Commit: 55f19ce
 
 2. **Block Component Abstraction** 🟠 HIGH PRIORITY
    - Create base `BlockComponent` wrapper or HOC to eliminate ~50-70% duplication
@@ -176,12 +179,11 @@ LMS/
 ```
 Branch: main
 Last commits:
+  55f19ce - refactor: Complete API client migration - Phase 6.1
+  4d17743 - docs: Update project status - Phase 5.1 Quiz Analytics complete
   065bfec - feat: Implement quiz analytics dashboard with score distributions and attempt trends (Phase 5.1)
   e576404 - docs: Update project status - Phase 5.4 Time Limits complete
   fb00ef3 - feat: Add time limits with countdown timer and auto-submit to quizzes (Phase 5.4)
-  1c88bf1 - fix: Cascade delete blocks on module deletion and persist quiz correct answers immediately
-  6215591 - Add learner course view with module gating
-  89b2f0c - Add Quiz/Assignment widget with gating and completion tracking
 ```
 
 To view more: `git log --oneline -10`
