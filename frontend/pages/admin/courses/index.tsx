@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../../src/auth/AuthProvider'
 import AdminLayout from '../../../src/components/AdminLayout'
+import { AdminTable, TableColumn } from '../../../src/components/AdminTable'
+import { useTableData } from '../../../src/hooks/useTableData'
 import api from '../../../src/lib/api'
 import styles from '../../../styles/admin-table.module.css'
 
@@ -15,80 +17,54 @@ interface Course {
 
 const CoursesPage: React.FC = () => {
   const { user } = useAuth()
-  const [courses, setCourses] = useState<Course[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const loadCourses = async () => {
-      try {
-        const data = await api.getGlobalCourses()
-        setCourses(Array.isArray(data) ? data : [])
-      } catch (err) {
-        console.error('Failed to load courses:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadCourses()
-  }, [])
+  const { data: courses, loading } = useTableData<Course>({
+    fetchFn: api.getGlobalCourses,
+    deps: [user],
+  })
 
   if (!user) return <AdminLayout title="Courses"><div>Loading...</div></AdminLayout>
   if (user.role !== 'admin') return <AdminLayout title="Courses"><div>Unauthorized</div></AdminLayout>
 
+  const columns: TableColumn<Course>[] = [
+    {
+      key: 'title',
+      header: 'Title',
+    },
+    {
+      key: 'tenantName',
+      header: 'Tenant',
+      render: (value) => value || 'Global',
+    },
+  ]
+
   return (
     <AdminLayout title="Courses">
       <div style={{ maxWidth: 1200, marginBottom: 32 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div className={styles.header}>
           <h1 style={{ margin: 0, fontSize: 28, color: '#333' }}>Courses</h1>
-          <Link href="/admin/courses/new" style={{ 
-            padding: '10px 16px', 
-            background: '#667eea', 
-            color: 'white', 
-            textDecoration: 'none',
-            borderRadius: 6,
-            fontSize: 14,
-            fontWeight: 500
-          }}>
+          <Link href="/admin/courses/new" className={styles.primaryButton}>
             + New Course
           </Link>
         </div>
 
-        {loading ? (
-          <div>Loading...</div>
-        ) : courses.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#666', padding: 40 }}>
-            <p>No courses yet. Create one to get started.</p>
-          </div>
-        ) : (
-          <div className={styles.table}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Tenant</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {courses.map(course => (
-                  <tr key={course.id}>
-                    <td>{course.title}</td>
-                    <td>{course.tenantName || 'Global'}</td>
-                    <td>
-                      <Link href={`/admin/courses/${course.id}/edit`} style={{ 
-                        color: '#667eea', 
-                        textDecoration: 'none',
-                        marginRight: 12
-                      }}>
-                        Edit
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <AdminTable
+          columns={columns}
+          data={courses}
+          loading={loading}
+          emptyStateText="No courses yet. Create one to get started."
+          actions={(course) => (
+            <Link
+              href={`/admin/courses/${course.id}/edit`}
+              style={{
+                color: '#667eea',
+                textDecoration: 'none',
+              }}
+            >
+              Edit
+            </Link>
+          )}
+        />
       </div>
     </AdminLayout>
   )

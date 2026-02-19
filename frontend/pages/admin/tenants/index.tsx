@@ -2,15 +2,21 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import AdminLayout from '../../../src/components/AdminLayout'
+import { AdminTable, TableColumn } from '../../../src/components/AdminTable'
+import { useTableData } from '../../../src/hooks/useTableData'
 import { useAuth } from '../../../src/auth/AuthProvider'
 import api from '../../../src/lib/api'
 import styles from '../../../styles/admin-table.module.css'
 
+interface Tenant {
+  id: string
+  name: string
+  domain?: string
+}
+
 const TenantsPage: React.FC = () => {
   const { user } = useAuth()
   const router = useRouter()
-  const [tenants, setTenants] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
   const [selectedTenantId, setSelectedTenantId] = useState<string>('')
 
   useEffect(() => {
@@ -18,42 +24,40 @@ const TenantsPage: React.FC = () => {
     if (saved) setSelectedTenantId(saved)
   }, [])
 
-  useEffect(() => {
-    if (!user || user.role !== 'admin') return
-    const loadTenants = async () => {
-      try {
-        const data = await api.getTenants()
-        if (Array.isArray(data)) {
-          setTenants(data)
-        } else if (data && typeof data === 'object') {
-          setTenants(Array.isArray(data.tenants) ? data.tenants : [])
-        } else {
-          setTenants([])
-        }
-      } catch (err) {
-        setTenants([])
-      } finally {
-        setLoading(false)
+  const { data: tenants, loading, deleteItem } = useTableData<Tenant>({
+    fetchFn: async () => {
+      const data = await api.getTenants()
+      if (Array.isArray(data)) {
+        return data
+      } else if (data && typeof data === 'object') {
+        return Array.isArray(data.tenants) ? data.tenants : []
       }
-    }
-    loadTenants()
-  }, [user])
+      return []
+    },
+    onDeleteFn: api.deleteTenant,
+    onDeleteSuccess: () => {
+      alert('Tenant deleted successfully')
+    },
+    deps: [user],
+  })
 
-  const handleViewTenant = (tenantId: string) => {
-    setSelectedTenantId(tenantId)
-    localStorage.setItem('selectedTenantId', tenantId)
-    router.push(`/admin/tenants/${tenantId}`)
+  const handleViewTenant = (tenant: Tenant) => {
+    setSelectedTenantId(tenant.id)
+    localStorage.setItem('selectedTenantId', tenant.id)
+    router.push(`/admin/tenants/${tenant.id}`)
   }
 
-  const handleDeleteTenant = async (tenantId: string) => {
-    if (!confirm('Are you sure you want to delete this tenant? This action cannot be undone.')) {
+  const handleDeleteTenant = async (tenant: Tenant) => {
+    if (
+      !confirm(
+        'Are you sure you want to delete this tenant? This action cannot be undone.'
+      )
+    ) {
       return
     }
-    
+
     try {
-      await api.deleteTenant(tenantId)
-      setTenants(tenants.filter(t => t.id !== tenantId))
-      alert('Tenant deleted successfully')
+      await deleteItem(tenant.id)
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete tenant')
     }
@@ -62,57 +66,73 @@ const TenantsPage: React.FC = () => {
   if (!user) return <div>Loading...</div>
   if (user.role !== 'admin') return <div>Unauthorized</div>
 
+  const columns: TableColumn<Tenant>[] = [
+    {
+      key: 'name',
+      header: 'Name',
+      render: (value) => <strong>{value}</strong>,
+    },
+    {
+      key: 'domain',
+      header: 'Domain',
+      render: (value) => value || '—',
+    },
+  ]
+
   return (
     <AdminLayout title="Tenants">
       <div className={styles.header}>
         <div>
-          <p className={styles.subtitle}>Manage course portals and white-label instances</p>
+          <p className={styles.subtitle}>
+            Manage course portals and white-label instances
+          </p>
         </div>
         <Link href="/admin/tenants/new" className={styles.primaryButton}>
           + New Tenant
         </Link>
       </div>
 
-      {loading ? (
-        <p>Loading tenants...</p>
-      ) : !Array.isArray(tenants) || tenants.length === 0 ? (
-        <div className={styles.empty}>
-          <p>No tenants yet. Create your first tenant to get started.</p>
-          <Link href="/admin/tenants/new" className={styles.primaryButton}>
+      <AdminTable
+        columns={columns}
+        data={tenants}
+        loading={loading}
+        emptyStateText="No tenants yet. Create your first tenant to get started."
+        emptyStateAction={
+          <Link
+            href="/admin/tenants/new"
+            className={styles.primaryButton}
+            style={{ marginTop: 16, display: 'inline-block' }}
+          >
             Create First Tenant
           </Link>
-        </div>
-      ) : (
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Domain</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tenants.map(tenant => (
-                <tr key={tenant.id}>
-                  <td className={styles.nameCell}>
-                    <strong>{tenant.name}</strong>
-                  </td>
-                  <td>{tenant.domain || '—'}</td>
-                  <td className={styles.actions}>
-                    <button onClick={() => handleViewTenant(tenant.id)} style={{ border: 'none', background: 'none', padding: '0 8px 0 0', cursor: 'pointer' }}>
-                      <span className={styles.secondaryButton}>View Tenant</span>
-                    </button>
-                    <button onClick={() => handleDeleteTenant(tenant.id)} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
-                      <span className={styles.secondaryButton} style={{ color: '#d32f2f' }}>Delete</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        }
+        actions={(tenant) => (
+          <>
+            <button
+              onClick={() => handleViewTenant(tenant)}
+              style={{
+                border: 'none',
+                background: 'none',
+                padding: '0 8px 0 0',
+                cursor: 'pointer',
+              }}
+            >
+              <span className={styles.secondaryButton}>View Tenant</span>
+            </button>
+            <button
+              onClick={() => handleDeleteTenant(tenant)}
+              style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}
+            >
+              <span
+                className={styles.secondaryButton}
+                style={{ color: '#d32f2f' }}
+              >
+                Delete
+              </span>
+            </button>
+          </>
+        )}
+      />
     </AdminLayout>
   )
 }
