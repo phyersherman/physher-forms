@@ -60,7 +60,7 @@ export default function CourseAnalytics() {
     const fetchData = async () => {
       try {
         // Fetch course details
-        const courseRes = await fetch(`${API_BASE}/courses/${courseId}`, {
+        const courseRes = await fetch(`/api/courses/${courseId}`, {
           credentials: 'include',
         })
         if (courseRes.ok) {
@@ -69,7 +69,7 @@ export default function CourseAnalytics() {
         }
 
         // Fetch analytics
-        const analyticsRes = await fetch(`${API_BASE}/analytics/course/${courseId}/quizzes`, {
+        const analyticsRes = await fetch(`/api/analytics/course?courseId=${courseId}`, {
           credentials: 'include',
         })
         if (!analyticsRes.ok) {

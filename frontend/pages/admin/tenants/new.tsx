@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import AdminLayout from '../../../src/components/AdminLayout'
 import { useAuth } from '../../../src/auth/AuthProvider'
-import { refreshCsrf } from '../../../src/lib/api'
+import api from '../../../src/lib/api'
 
 const NewTenant: React.FC = () => {
   const { user } = useAuth()
@@ -20,22 +20,7 @@ const NewTenant: React.FC = () => {
     setError('')
     setLoading(true)
     try {
-      const token = await refreshCsrf()
-      const response = await fetch('http://localhost:4000/api/tenants', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': token || ''
-        },
-        body: JSON.stringify({ name })
-      })
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to create tenant')
-      }
-      const newTenant = await response.json()
-      // Redirect to tenant detail page for course assignment
+      const newTenant = await api.createTenant({ name })
       router.push(`/admin/tenants/${newTenant.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create tenant')

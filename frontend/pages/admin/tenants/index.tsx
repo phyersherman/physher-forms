@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import AdminLayout from '../../../src/components/AdminLayout'
 import { useAuth } from '../../../src/auth/AuthProvider'
-import { refreshCsrf } from '../../../src/lib/api'
+import api from '../../../src/lib/api'
 import styles from '../../../styles/admin-table.module.css'
 
 const TenantsPage: React.FC = () => {
@@ -20,27 +20,28 @@ const TenantsPage: React.FC = () => {
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return
-    fetch('http://localhost:4000/api/tenants', { credentials: 'include' })
-      .then(r => r.json())
-      .then(data => {
-        // Ensure data is an array
+    const loadTenants = async () => {
+      try {
+        const data = await api.getTenants()
         if (Array.isArray(data)) {
           setTenants(data)
         } else if (data && typeof data === 'object') {
-          // If it's an object, check for a tenants property
           setTenants(Array.isArray(data.tenants) ? data.tenants : [])
         } else {
           setTenants([])
         }
-      })
-      .catch(() => setTenants([]))
-      .finally(() => setLoading(false))
+      } catch (err) {
+        setTenants([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadTenants()
   }, [user])
 
   const handleViewTenant = (tenantId: string) => {
     setSelectedTenantId(tenantId)
     localStorage.setItem('selectedTenantId', tenantId)
-    // Navigate to tenant detail page
     router.push(`/admin/tenants/${tenantId}`)
   }
 
@@ -50,15 +51,7 @@ const TenantsPage: React.FC = () => {
     }
     
     try {
-      const token = await refreshCsrf()
-      const response = await fetch(`http://localhost:4000/api/tenants/${tenantId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: { 'X-CSRF-Token': token || '' }
-      })
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
+      await api.deleteTenant(tenantId)
       setTenants(tenants.filter(t => t.id !== tenantId))
       alert('Tenant deleted successfully')
     } catch (err) {

@@ -106,11 +106,97 @@ export async function assignCourseToTenant(globalCourseId: string, tenantId: str
   })
 }
 
+export async function copyCourse(courseId: string, tenantId: string, newTitle?: string) {
+  return fetchJson(`/courses/${courseId}/copy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tenant_id: tenantId, title: newTitle }),
+  })
+}
+
+export async function logout() {
+  return fetchJson('/auth/logout', { method: 'POST' })
+}
+
+// Tenant management
+export async function getTenants() {
+  return fetchJson('/tenants', { method: 'GET' })
+}
+
+export async function getTenant(tenantId: string) {
+  return fetchJson(`/tenants/${tenantId}`, { method: 'GET' })
+}
+
+export async function createTenant(data: { name: string; domain?: string; theme_config?: any }) {
+  return fetchJson('/tenants', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateTenant(tenantId: string, data: { name?: string; domain?: string; theme_config?: any }) {
+  return fetchJson(`/tenants/${tenantId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteTenant(tenantId: string) {
+  return fetchJson(`/tenants/${tenantId}`, { method: 'DELETE' })
+}
+
+// Learner APIs
+export async function getModuleAccess(moduleId: string, courseId: string) {
+  return fetchJson(`/modules/${moduleId}/courses/${courseId}/access`, { method: 'GET' })
+}
+
+export async function getModule(moduleId: string) {
+  return fetchJson(`/modules/${moduleId}`, { method: 'GET' })
+}
+
+export async function completeModule(moduleId: string, courseId: string) {
+  return fetchJson('/modules/complete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ module_id: moduleId, course_id: courseId }),
+  })
+}
+
+export async function submitQuiz(blockId: string, answers: Record<string, any>) {
+  return fetchJson('/quiz/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ block_id: blockId, answers }),
+  })
+}
+
+export async function getQuizAttempts(blockId: string) {
+  return fetchJson(`/quiz/attempts/${blockId}`, { method: 'GET' })
+}
+
+export async function getLatestQuizAttempt(blockId: string) {
+  return fetchJson(`/quiz/latest/${blockId}`, { method: 'GET' })
+}
+
+// Analytics APIs
+export async function getAnalyticsAdmin() {
+  return fetchJson('/analytics/admin', { method: 'GET' })
+}
+
+export async function getAnalyticsTenantCourses(tenantId?: string) {
+  const url = tenantId ? `/analytics/tenant/courses?tenantId=${tenantId}` : '/analytics/tenant/courses'
+  return fetchJson(url, { method: 'GET' })
+}
+
 export default { 
   login, 
+  logout,
   me, 
   refreshCsrf, 
   refresh,
+  // Course management
   getGlobalCourses,
   getTenantCourses,
   createCourse,
@@ -118,4 +204,21 @@ export default {
   updateCourse,
   deleteCourse,
   assignCourseToTenant,
+  copyCourse,
+  // Tenant management
+  getTenants,
+  getTenant,
+  createTenant,
+  updateTenant,
+  deleteTenant,
+  // Learner APIs
+  getModuleAccess,
+  getModule,
+  completeModule,
+  submitQuiz,
+  getQuizAttempts,
+  getLatestQuizAttempt,
+  // Analytics
+  getAnalyticsAdmin,
+  getAnalyticsTenantCourses,
 }

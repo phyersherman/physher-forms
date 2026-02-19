@@ -210,8 +210,194 @@ const getTopPerformers = async (blockId, tenantId, courseId, limit = 10) => {
         .sort((a, b) => b.highestScore - a.highestScore)
         .slice(0, limit);
 };
+const getTenantQuizAnalytics = async (tenantId, daysBack = 30) => {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+    // Get all courses for this tenant
+    const courses = await client_1.default.course.findMany({
+        where: {
+            tenant_id: tenantId,
+        },
+        include: {
+            chapters: {
+                include: {
+                    modules: true,
+                },
+            },
+        },
+    });
+    // Get all quiz attempts across all courses in this tenant
+    const allAttempts = await client_1.default.quizAttempt.findMany({
+        where: {
+            tenantId,
+            submittedAt: {
+                gte: cutoffDate,
+            },
+        },
+    });
+    // If no attempts, return empty analytics
+    if (allAttempts.length === 0) {
+        return {
+            tenantId,
+            totalAttempts: 0,
+            uniqueUsers: 0,
+            courseCount: courses.length,
+            averageScore: 0,
+            passRate: 0,
+            courses: [],
+        };
+    }
+    // Calculate overall stats
+    const scores = allAttempts.map((a) => a.score);
+    const averageScore = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100;
+    const passCount = allAttempts.filter((a) => a.passed).length;
+    const passRate = Math.round((passCount / allAttempts.length) * 100 * 100) / 100;
+    const uniqueUsers = new Set(allAttempts.map((a) => a.userId)).size;
+    // Get analytics per course
+    const courseAnalytics = [];
+    for (const course of courses) {
+        const courseAttempts = allAttempts.filter((a) => a.courseId === course.id);
+        if (courseAttempts.length > 0) {
+            const courseScores = courseAttempts.map((a) => a.score);
+            const coursePassCount = courseAttempts.filter((a) => a.passed).length;
+            const coursePassRate = Math.round((coursePassCount / courseAttempts.length) * 100 * 100) / 100;
+            const courseUniqueUsers = new Set(courseAttempts.map((a) => a.userId)).size;
+            const courseAverageScore = Math.round((courseScores.reduce((a, b) => a + b, 0) / courseScores.length) * 100) / 100;
+            // Count modules
+            const moduleCount = course.chapters.reduce((sum, chapter) => sum + chapter.modules.length, 0);
+            courseAnalytics.push({
+                courseId: course.id,
+                courseName: course.title,
+                totalAttempts: courseAttempts.length,
+                uniqueUsers: courseUniqueUsers,
+                averageScore: courseAverageScore,
+                passRate: coursePassRate,
+                moduleCount,
+            });
+        }
+    }
+    // Sort by total attempts descending
+    courseAnalytics.sort((a, b) => b.totalAttempts - a.totalAttempts);
+    return {
+        tenantId,
+        totalAttempts: allAttempts.length,
+        uniqueUsers,
+        courseCount: courses.length,
+        averageScore,
+        passRate,
+        courses: courseAnalytics,
+    };
+};
+const getAdminDashboardAnalytics = async () => {
+    // Get all tenants
+    const tenants = await client_1.default.tenant.findMany();
+    const results = [];
+    for (const tenant of tenants) {
+        // Count users in this tenant
+        const totalUsers = await client_1.default.user.count({
+            where: { tenantId: tenant.id }
+        });
+        // Count courses for this tenant
+        const totalCourses = await client_1.default.course.count({
+            where: { tenant_id: tenant.id }
+        });
+        // Count module completions (as proxy for course completions)
+        const completedCourses = await client_1.default.moduleCompletion.findMany({
+            where: { tenantId: tenant.id },
+            select: { userId: true, moduleId: true }
+        });
+        const uniqueUsersWithCompletion = new Set(completedCourses.map(c => c.userId)).size;
+        // Users without any completion
+        const usersWithoutCompletion = totalUsers - uniqueUsersWithCompletion;
+        // Quiz pass/fail rate for this tenant
+        const quizAttempts = await client_1.default.quizAttempt.findMany({
+            where: { tenantId: tenant.id }
+        });
+        const passCount = quizAttempts.filter(a => a.passed).length;
+        const quizPassRate = quizAttempts.length > 0
+            ? Math.round((passCount / quizAttempts.length) * 100 * 100) / 100
+            : 0;
+        results.push({
+            tenantId: tenant.id,
+            tenantName: tenant.name,
+            totalUsers,
+            totalCourses,
+            completedCourses: uniqueUsersWithCompletion,
+            usersWithoutCompletion,
+            quizPassRate,
+            totalQuizAttempts: quizAttempts.length
+        });
+    }
+    return results;
+};
+const getTenantCourseAnalytics = async (tenantId) => {
+    // Get all courses for this tenant
+    const courses = await client_1.default.course.findMany({
+        where: { tenant_id: tenantId }
+    });
+    const results = [];
+    for (const course of courses) {
+        // Count enrollments
+        const totalEnrolled = await client_1.default.enrollment.count({
+            where: {
+                tenantId,
+                courseId: course.id
+            }
+        });
+        // Count module completions for this course
+        const moduleCompletions = await client_1.default.moduleCompletion.findMany({
+            where: {
+                tenantId,
+                // This is tricky - we need to find modules in this course
+            }
+        });
+        // Get quiz attempts for this course
+        const quizAttempts = await client_1.default.quizAttempt.findMany({
+            where: {
+                tenantId,
+                courseId: course.id
+            }
+        });
+        const passCount = quizAttempts.filter(a => a.passed).length;
+        const quizPassRate = quizAttempts.length > 0
+            ? Math.round((passCount / quizAttempts.length) * 100 * 100) / 100
+            : 0;
+        const avgScore = quizAttempts.length > 0
+            ? Math.round((quizAttempts.reduce((sum, a) => sum + a.score, 0) / quizAttempts.length) * 100) / 100
+            : 0;
+        // Get unique users who completed modules in this course
+        const modules = await client_1.default.module.findMany({
+            where: { chapter: { course_id: course.id } },
+            select: { id: true }
+        });
+        const moduleIds = modules.map(m => m.id);
+        const completedUsers = await client_1.default.moduleCompletion.findMany({
+            where: {
+                tenantId,
+                moduleId: { in: moduleIds }
+            },
+            select: { userId: true }
+        });
+        const uniqueCompletedUsers = new Set(completedUsers.map(c => c.userId)).size;
+        const notCompleted = totalEnrolled - uniqueCompletedUsers;
+        results.push({
+            courseId: course.id,
+            courseName: course.title,
+            totalEnrolled,
+            totalCompleted: uniqueCompletedUsers,
+            notCompleted,
+            quizPassRate,
+            totalQuizAttempts: quizAttempts.length,
+            averageQuizScore: avgScore
+        });
+    }
+    return results;
+};
 exports.default = {
     getQuizAnalytics,
     getCourseQuizAnalytics,
     getTopPerformers,
+    getTenantQuizAnalytics,
+    getAdminDashboardAnalytics,
+    getTenantCourseAnalytics,
 };

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '../../../src/auth/AuthProvider'
 import AdminLayout from '../../../src/components/AdminLayout'
+import api from '../../../src/lib/api'
 import styles from '../../../styles/admin-table.module.css'
 
 interface Course {
@@ -18,16 +19,17 @@ const CoursesPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('http://localhost:4000/api/courses', { credentials: 'include' })
-      .then(r => r.json())
-      .then(data => {
+    const loadCourses = async () => {
+      try {
+        const data = await api.getGlobalCourses()
         setCourses(Array.isArray(data) ? data : [])
-        setLoading(false)
-      })
-      .catch(err => {
+      } catch (err) {
         console.error('Failed to load courses:', err)
+      } finally {
         setLoading(false)
-      })
+      }
+    }
+    loadCourses()
   }, [])
 
   if (!user) return <AdminLayout title="Courses"><div>Loading...</div></AdminLayout>

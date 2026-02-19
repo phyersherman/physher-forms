@@ -13,6 +13,8 @@ const Home: NextPage = () => {
       router.replace('/login')
     } else if (user && user.role === 'admin') {
       router.replace('/admin/tenants')
+    } else if (user) {
+      router.replace('/dashboard')
     }
   }, [user, router])
 

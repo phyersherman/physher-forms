@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
+import api from '../../../src/lib/api'
 
 const ModulePreview: React.FC = () => {
   const router = useRouter()
@@ -7,11 +8,16 @@ const ModulePreview: React.FC = () => {
   const [module, setModule] = useState<any>(null)
 
   useEffect(() => {
-    if (moduleId) {
-      fetch(`http://localhost:4000/api/modules/${moduleId}`, { credentials: 'include' })
-        .then(r => r.json())
-        .then(setModule)
-        .catch(() => setModule(null))
+    if (moduleId && typeof moduleId === 'string') {
+      const loadModule = async () => {
+        try {
+          const data = await api.getModule(moduleId)
+          setModule(data)
+        } catch (err) {
+          setModule(null)
+        }
+      }
+      loadModule()
     }
   }, [moduleId])
 

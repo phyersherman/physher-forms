@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '../../../../src/auth/AuthProvider'
 import AdminLayout from '../../../../src/components/AdminLayout'
+import api from '../../../../src/lib/api'
 import { CourseEditor, CourseData, Chapter } from '../../../../src/components/CourseEditor'
 import { IBlock } from '../../../../src/components/BlockEditor/types'
 
@@ -15,29 +16,27 @@ const EditCoursePage: React.FC = () => {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (courseId) {
-      fetch(`http://localhost:4000/api/courses/${courseId}`, { credentials: 'include' })
-        .then(r => {
-          if (!r.ok) throw new Error('Failed to load course')
-          return r.json()
-        })
-        .then(c => {
+    const loadData = async () => {
+      try {
+        if (courseId && typeof courseId === 'string') {
+          const c = await api.getCourse(courseId)
           setCourse(c)
-          setLoading(false)
-        })
-        .catch(err => {
-          console.error('Failed to load course:', err)
-          setCourse(null)
-          setLoading(false)
-        })
+        }
+        
+        if (tenantId && typeof tenantId === 'string') {
+          const t = await api.getTenant(tenantId)
+          setTenant(t)
+        }
+      } catch (err) {
+        console.error('Failed to load data:', err)
+        setCourse(null)
+        setTenant(null)
+      } finally {
+        setLoading(false)
+      }
     }
     
-    if (tenantId && typeof tenantId === 'string') {
-      fetch(`http://localhost:4000/api/tenants/${tenantId}`, { credentials: 'include' })
-        .then(r => r.json())
-        .then(t => setTenant(t))
-        .catch(() => setTenant(null))
-    }
+    loadData()
   }, [courseId, tenantId])
 
   if (!user) return <AdminLayout title="Edit Course"><div>Loading...</div></AdminLayout>
@@ -85,33 +84,7 @@ const EditCoursePage: React.FC = () => {
   const handleSave = async (data: CourseData) => {
     setSaving(true)
     try {
-      // Get CSRF token
-      const csrfRes = await fetch('http://localhost:4000/api/csrf-token', {
-        method: 'GET',
-        credentials: 'include'
-      })
-      const csrfData = await csrfRes.json()
-      const csrfToken = csrfData.csrfToken
-
-      // Update course
-      const updateRes = await fetch(`http://localhost:4000/api/courses/${courseId}`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
-        },
-        body: JSON.stringify({
-          title: data.title,
-          description: data.description || null,
-          chapters: data.chapters,
-        })
-      })
-
-      if (!updateRes.ok) {
-        throw new Error('Failed to update course')
-      }
-
+      await api.updateCourse(courseId as string, data.title, data.description)
       alert('Course saved successfully')
     } catch (err) {
       console.error('Save error:', err)
@@ -123,23 +96,7 @@ const EditCoursePage: React.FC = () => {
 
   const handleDelete = async () => {
     try {
-      const csrfRes = await fetch('http://localhost:4000/api/csrf-token', {
-        method: 'GET',
-        credentials: 'include'
-      })
-      const csrfData = await csrfRes.json()
-      const csrfToken = csrfData.csrfToken
-
-      const res = await fetch(`http://localhost:4000/api/courses/${courseId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: { 'X-CSRF-Token': csrfToken }
-      })
-
-      if (!res.ok) {
-        throw new Error('Failed to delete course')
-      }
-
+      await api.deleteCourse(courseId as string)
       alert('Course deleted')
       router.push(backUrl)
     } catch (err) {
@@ -152,23 +109,25 @@ const EditCoursePage: React.FC = () => {
 
   return (
     <AdminLayout title={pageTitle}>
-      <div style={{ marginBottom: '16px', display: 'flex', gap: '8px' }}>
-        <button
-          onClick={() => router.push(`/admin/courses/${courseId}/analytics`)}
-          style={{
-            padding: '8px 16px',
-            background: '#1976d2',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontWeight: 600,
-            fontSize: '14px',
-          }}
-        >
-          📊 View Analytics
-        </button>
-      </div>
+      {courseId && (
+        <div style={{ marginBottom: '16px', display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => router.push(`/admin/courses/${courseId}/analytics`)}
+            style={{
+              padding: '8px 16px',
+              background: '#1976d2',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '14px',
+            }}
+          >
+            📊 View Analytics
+          </button>
+        </div>
+      )}
       <CourseEditor
         mode="edit"
         entityType="course"

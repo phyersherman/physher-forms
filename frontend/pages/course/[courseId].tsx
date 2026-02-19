@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import QuizBlockDisplay from '../../src/components/BlockEditor/blocks/QuizBlockDisplay'
+import api from '../../src/lib/api'
 import styles from '../../styles/admin-dashboard.module.css'
 
 interface Module {
@@ -51,11 +52,7 @@ const CourseViewPage: React.FC = () => {
 
     const fetchCourse = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/api/courses/${courseId}`, {
-          credentials: 'include',
-        })
-        if (!res.ok) throw new Error('Failed to fetch course')
-        const data = await res.json()
+        const data = await api.getCourse(courseId)
         setCourse(data)
         setLoading(false)
 
@@ -78,13 +75,7 @@ const CourseViewPage: React.FC = () => {
 
   const checkModuleAccess = async (moduleId: string, cId: string) => {
     try {
-      const res = await fetch(
-        `http://localhost:4000/api/modules/${moduleId}/courses/${cId}/access`,
-        {
-          credentials: 'include',
-        }
-      )
-      const status = (await res.json()) as ModuleAccessStatus
+      const status = await api.getModuleAccess(moduleId, cId)
       setModuleAccessStatus(prev => ({
         ...prev,
         [moduleId]: status,
@@ -235,15 +226,11 @@ const ModuleView: React.FC<ModuleViewProps> = ({ courseId, moduleId, onModuleSel
   useEffect(() => {
     const fetchModule = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/api/modules/${moduleId}`, {
-          credentials: 'include',
-        })
-        if (!res.ok) throw new Error('Failed to fetch module')
-        const data = await res.json()
+        const data = await api.getModule(moduleId)
         setModule(data)
-        setLoading(false)
       } catch (err) {
         console.error('Error fetching module:', err)
+      } finally {
         setLoading(false)
       }
     }

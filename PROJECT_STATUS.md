@@ -84,6 +84,51 @@ A multi-tenant LMS framework where:
 3. **Mobile Optimization** - Make learner view responsive for tablets/phones
 4. **Time Limits** ✅ DONE - Countdown timers for timed quizzes with auto-submit, timer shows visual warnings (green→orange→red)
 
+### Phase 6: Code Cleanup & Optimization (PLANNED)
+1. **API Client Completion** 🔴 HIGH PRIORITY
+   - Migrate all direct `fetch()` calls to use centralized `frontend/src/lib/api.ts` client
+   - Add missing methods: `getTenants()`, `createTenant()`, `updateTenant()`, `deleteTenant()`
+   - Add learner APIs: `getModuleAccess()`, `submitQuiz()`, `checkModuleCompletion()`, `getAnalytics()`
+   - Benefit: Consistent CSRF handling, retry logic, error handling, and centralized URL configuration
+
+2. **Block Component Abstraction** 🟠 HIGH PRIORITY
+   - Create base `BlockComponent` wrapper or HOC to eliminate ~50-70% duplication
+   - Abstract common patterns: state management, JSON config parsing, expand/collapse UI, delete button
+   - Target components: TextBlock, ImageBlock, VideoBlock, QuoteBlock, ButtonBlock
+   - Extract to custom hook: `useBlockConfig()` for JSON parsing with defaults
+   - Benefit: Reduce code by ~40%, easier maintenance, consistency across blocks
+
+3. **Form Input Components** 🟡 MEDIUM PRIORITY
+   - Create reusable components: `<FormInput>`, `<FormLabel>`, `<FormGroup>`, `<FormTextarea>`, `<FormColorPicker>`, `<FormSelect>`
+   - Replace inline form UI across all block components
+   - Benefit: DRY principle, consistent styling, easier theme adjustments
+
+4. **Block Defaults Configuration** 🟡 MEDIUM PRIORITY
+   - Create `frontend/src/constants/block-defaults.ts` with centralized defaults
+   - Move hardcoded values: button sizes, colors, default config objects
+   - Benefit: Single source of truth for styling, easier customization
+
+5. **CSS Consolidation** 🟡 MEDIUM PRIORITY
+   - Merge overlapping button styles between `admin-table.module.css` and `admin-dashboard.module.css`
+   - Create shared style variables (colors, spacing, shadows)
+   - Consider: `frontend/styles/shared.module.css` or CSS custom properties
+   - Benefit: Reduced CSS, easier theme changes, better maintainability
+
+6. **Table Listing Page Component** 🟡 MEDIUM PRIORITY
+   - Extract common table pattern into reusable `<AdminTable>` component or `useTableData()` hook
+   - Affected pages: `/admin/courses/index.tsx`, `/admin/courses/global.tsx`, `/admin/tenants/index.tsx`
+   - Handle: loading states, empty states, pagination setup, standard CRUD actions
+   - Benefit: ~60% code reduction across table pages, consistency
+
+7. **Backend Service Optimization** 🟢 LOW PRIORITY
+   - Split `backend/src/services/courseService.ts` (663 lines) into focused modules:
+     - `courseService.ts` - course CRUD
+     - `chapterService.ts` - chapter operations
+     - `moduleService.ts` - module operations
+     - `courseDataService.ts` - complex data operations (copy, sync, etc.)
+   - Extract repeated Prisma patterns into query builders
+   - Benefit: Better readability, easier testing, clearer separation of concerns
+
 ## 📊 Project Structure
 
 ```

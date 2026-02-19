@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import AdminLayout from '../../../src/components/AdminLayout'
 import { useAuth } from '../../../src/auth/AuthProvider'
-import { refreshCsrf } from '../../../src/lib/api'
+import api from '../../../src/lib/api'
 import styles from '../../../styles/admin-table.module.css'
 
 interface Tenant {
@@ -21,6 +21,27 @@ interface Course {
   created_at: string
 }
 
+interface TenantAnalytics {
+  tenantId: string
+  totalAttempts: number
+  uniqueUsers: number
+  courseCount: number
+  averageScore: number
+  passRate: number
+  courses: any[]
+}
+
+interface CourseAnalytic {
+  courseId: string
+  courseName: string
+  totalEnrolled: number
+  totalCompleted: number
+  notCompleted: number
+  quizPassRate: number
+  totalQuizAttempts: number
+  averageQuizScore: number
+}
+
 const TenantDetailPage: React.FC = () => {
   const { user } = useAuth()
   const router = useRouter()
@@ -36,38 +57,42 @@ const TenantDetailPage: React.FC = () => {
   const [selectedCourseForCopy, setSelectedCourseForCopy] = useState<Course | null>(null)
   const [selectedCopyTenantId, setSelectedCopyTenantId] = useState<string>('')
   const [error, setError] = useState('')
+  const [courseAnalytics, setCourseAnalytics] = useState<CourseAnalytic[]>([])
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
 
   useEffect(() => {
     if (!tenantId) return
     setLoading(true)
+    setAnalyticsLoading(true)
+
+    const loadData = async () => {
+      try {
+        const [tenantData, coursesData, tenantsData, analyticsData] = await Promise.all([
+          api.getTenant(tenantId as string),
+          api.getTenantCourses(tenantId as string),
+          api.getTenants(),
+          api.getAnalyticsTenantCourses(tenantId as string),
+        ])
+        setTenant(tenantData)
+        setTenantName(tenantData.name)
+        setCourses(Array.isArray(coursesData) ? coursesData : [])
+        setAllTenants(Array.isArray(tenantsData) ? tenantsData : [])
+        setCourseAnalytics(Array.isArray(analyticsData) ? analyticsData : [])
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load data')
+      } finally {
+        setLoading(false)
+        setAnalyticsLoading(false)
+      }
+    }
     
-    Promise.all([
-      fetch(`http://localhost:4000/api/tenants/${tenantId}`, { credentials: 'include' }).then(r => r.json()),
-      fetch(`http://localhost:4000/api/tenants/${tenantId}/courses`, { credentials: 'include' }).then(r => r.json()),
-      fetch('http://localhost:4000/api/tenants', { credentials: 'include' }).then(r => r.json())
-    ]).then(([tenantData, coursesData, tenantsData]) => {
-      setTenant(tenantData)
-      setTenantName(tenantData.name)
-      setCourses(Array.isArray(coursesData) ? coursesData : [])
-      setAllTenants(Array.isArray(tenantsData) ? tenantsData : [])
-      setLoading(false)
-    }).catch(err => {
-      setError(err.message)
-      setLoading(false)
-    })
+    loadData()
   }, [tenantId])
 
   const handleUpdateTenant = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const token = await refreshCsrf()
-      const res = await fetch(`http://localhost:4000/api/tenants/${tenantId}`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token || '' },
-        body: JSON.stringify({ name: tenantName })
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      await api.updateTenant(tenantId as string, { name: tenantName })
       setTenant({ ...tenant!, name: tenantName })
       setEditMode(false)
       alert('Tenant updated successfully')
@@ -79,13 +104,7 @@ const TenantDetailPage: React.FC = () => {
   const handleDeleteCourse = async (courseId: string) => {
     if (!confirm('Are you sure you want to delete this course?')) return
     try {
-      const token = await refreshCsrf()
-      const res = await fetch(`http://localhost:4000/api/courses/${courseId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: { 'X-CSRF-Token': token || '' }
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      await api.deleteCourse(courseId)
       setCourses(courses.filter(c => c.id !== courseId))
       alert('Course deleted successfully')
     } catch (err) {
@@ -96,17 +115,7 @@ const TenantDetailPage: React.FC = () => {
   const handleCopyCourse = async () => {
     if (!selectedCourseForCopy || !selectedCopyTenantId) return
     try {
-      const token = await refreshCsrf()
-      const res = await fetch(`http://localhost:4000/api/courses/${selectedCourseForCopy.id}/copy`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token || '' },
-        body: JSON.stringify({ targetTenantId: selectedCopyTenantId })
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || `HTTP ${res.status}`)
-      }
+      await api.copyCourse(selectedCourseForCopy.id, selectedCopyTenantId)
       setShowCopyModal(false)
       setSelectedCourseForCopy(null)
       setSelectedCopyTenantId('')
@@ -180,6 +189,60 @@ const TenantDetailPage: React.FC = () => {
             {error}
           </div>
         )}
+
+        {/* Analytics Section */}
+        {analyticsLoading ? (
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, padding: 24, marginBottom: 32, textAlign: 'center', color: '#666' }}>
+            Loading analytics...
+          </div>
+        ) : courseAnalytics.length > 0 ? (
+          <div style={{ marginBottom: 32 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>📊 Course Performance</h2>
+            <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, overflowX: 'auto' }}>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '13px',
+                }}
+              >
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                    <th style={{ textAlign: 'left', padding: '8px', fontWeight: 600 }}>Course</th>
+                    <th style={{ textAlign: 'center', padding: '8px', fontWeight: 600 }}>Enrolled</th>
+                    <th style={{ textAlign: 'center', padding: '8px', fontWeight: 600 }}>Completed</th>
+                    <th style={{ textAlign: 'center', padding: '8px', fontWeight: 600 }}>Not Started</th>
+                    <th style={{ textAlign: 'center', padding: '8px', fontWeight: 600 }}>Quiz Attempts</th>
+                    <th style={{ textAlign: 'center', padding: '8px', fontWeight: 600 }}>Pass Rate</th>
+                    <th style={{ textAlign: 'center', padding: '8px', fontWeight: 600 }}>Avg Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {courseAnalytics.map((course) => (
+                    <tr key={course.courseId} style={{ borderBottom: '1px solid #e2e8f0', background: course.quizPassRate >= 70 ? '#f1f8f4' : '#fff8f1' }}>
+                      <td style={{ padding: '8px', fontWeight: 500 }}>{course.courseName}</td>
+                      <td style={{ textAlign: 'center', padding: '8px' }}>{course.totalEnrolled}</td>
+                      <td style={{ textAlign: 'center', padding: '8px', fontWeight: 600, color: '#388e3c' }}>{course.totalCompleted}</td>
+                      <td style={{ textAlign: 'center', padding: '8px', fontWeight: 600, color: '#f57c00' }}>{course.notCompleted}</td>
+                      <td style={{ textAlign: 'center', padding: '8px' }}>{course.totalQuizAttempts}</td>
+                      <td
+                        style={{
+                          textAlign: 'center',
+                          padding: '8px',
+                          color: course.quizPassRate >= 70 ? '#388e3c' : '#f57c00',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {course.quizPassRate}%
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '8px' }}>{course.averageQuizScore}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
 
         {/* Courses Section */}
         <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, padding: 24 }}>

@@ -163,6 +163,56 @@ const getTopPerformers = async (req, res) => {
         res.status(400).json({ error: message });
     }
 };
+const getTenantAnalytics = async (req, res) => {
+    try {
+        const tenantId = req.user?.tenantId;
+        const daysBack = req.query.daysBack ? parseInt(req.query.daysBack) : 30;
+        if (!tenantId) {
+            return res.status(400).json({
+                error: 'tenantId is required',
+            });
+        }
+        const analytics = await quiz_analytics_service_1.default.getTenantQuizAnalytics(tenantId, daysBack);
+        res.json(analytics);
+    }
+    catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to get tenant analytics';
+        console.error('[getTenantAnalytics]', message);
+        res.status(400).json({ error: message });
+    }
+};
+const getAdminDashboardAnalytics = async (req, res) => {
+    try {
+        const analytics = await quiz_analytics_service_1.default.getAdminDashboardAnalytics();
+        res.json(analytics);
+    }
+    catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to get admin analytics';
+        console.error('[getAdminDashboardAnalytics]', message);
+        res.status(400).json({ error: message });
+    }
+};
+const getTenantCourseAnalytics = async (req, res) => {
+    try {
+        let tenantId = req.query.tenantId;
+        // If no tenantId provided, use the logged-in user's tenant
+        if (!tenantId) {
+            tenantId = req.user?.tenantId;
+        }
+        if (!tenantId) {
+            return res.status(400).json({
+                error: 'tenantId is required',
+            });
+        }
+        const analytics = await quiz_analytics_service_1.default.getTenantCourseAnalytics(tenantId);
+        res.json(analytics);
+    }
+    catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to get tenant course analytics';
+        console.error('[getTenantCourseAnalytics]', message);
+        res.status(400).json({ error: message });
+    }
+};
 exports.default = {
     submitQuizAttempt,
     checkModuleAccess,
@@ -172,4 +222,7 @@ exports.default = {
     getQuizAnalytics,
     getCourseQuizAnalytics,
     getTopPerformers,
+    getTenantAnalytics,
+    getAdminDashboardAnalytics,
+    getTenantCourseAnalytics,
 };

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
-import { login as apiLogin, me as apiMe, refreshCsrf as apiRefreshCsrf } from '../lib/api'
+import { login as apiLogin, logout as apiLogout, me as apiMe, refreshCsrf as apiRefreshCsrf } from '../lib/api'
 
 type AuthUser = { id: string; email: string; role: string; tenantId: string }
 
@@ -50,7 +50,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const logout = async () => {
-    await fetch(`${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000/api'}/auth/logout`, { method: 'POST', credentials: 'include' })
+    try {
+      await apiLogout()
+    } catch (e) {
+      // ignore logout errors
+    }
     setToken(undefined)
     setUser(null)
     localStorage.removeItem('token')

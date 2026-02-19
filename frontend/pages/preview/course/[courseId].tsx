@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
+import api from '../../../src/lib/api'
 
 const CoursePreview: React.FC = () => {
   const router = useRouter()
@@ -7,11 +8,16 @@ const CoursePreview: React.FC = () => {
   const [course, setCourse] = useState<any>(null)
 
   useEffect(() => {
-    if (courseId) {
-      fetch(`http://localhost:4000/api/courses/${courseId}`, { credentials: 'include' })
-        .then(r => r.json())
-        .then(setCourse)
-        .catch(() => setCourse(null))
+    if (courseId && typeof courseId === 'string') {
+      const loadCourse = async () => {
+        try {
+          const data = await api.getCourse(courseId)
+          setCourse(data)
+        } catch (err) {
+          setCourse(null)
+        }
+      }
+      loadCourse()
     }
   }, [courseId])
 

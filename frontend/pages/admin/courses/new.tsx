@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '../../../src/auth/AuthProvider'
 import AdminLayout from '../../../src/components/AdminLayout'
+import api from '../../../src/lib/api'
 import { CourseEditor, CourseData, Chapter } from '../../../src/components/CourseEditor'
 import { IBlock } from '../../../src/components/BlockEditor/types'
 
@@ -34,29 +35,36 @@ const NewCoursePage: React.FC = () => {
 
   // Load tenants and courses on mount
   useEffect(() => {
-    Promise.all([
-      fetch('http://localhost:4000/api/tenants', { credentials: 'include' }).then(r => r.json()),
-      fetch('http://localhost:4000/api/courses', { credentials: 'include' }).then(r => r.json()),
-    ])
-      .then(([tenantsData, coursesData]) => {
+    const loadData = async () => {
+      try {
+        const [tenantsData, coursesData] = await Promise.all([
+          api.getTenants(),
+          api.getGlobalCourses(),
+        ])
         setTenants(Array.isArray(tenantsData) ? tenantsData : [])
         setCourses(Array.isArray(coursesData) ? coursesData : [])
-        setLoading(false)
-      })
-      .catch(err => {
+      } catch (err) {
         console.error('Failed to load data:', err)
+      } finally {
         setLoading(false)
-      })
+      }
+    }
+    loadData()
   }, [])
 
   // Handle query param for tenant
   useEffect(() => {
     if (queryTenantId && typeof queryTenantId === 'string') {
       setSelectedTenantId(queryTenantId)
-      fetch(`http://localhost:4000/api/tenants/${queryTenantId}`, { credentials: 'include' })
-        .then(r => r.json())
-        .then(t => setTenant(t))
-        .catch(() => setTenant(null))
+      const loadTenant = async () => {
+        try {
+          const t = await api.getTenant(queryTenantId)
+          setTenant(t)
+        } catch (err) {
+          setTenant(null)
+        }
+      }
+      loadTenant()
       updateInitialData('', queryTenantId, '')
     }
   }, [queryTenantId])
@@ -111,44 +119,14 @@ const NewCoursePage: React.FC = () => {
 
     setSaving(true)
     try {
-      const csrfRes = await fetch('http://localhost:4000/api/csrf-token', {
-        method: 'GET',
-        credentials: 'include'
-      })
-      const csrfData = await csrfRes.json()
-      const csrfToken = csrfData.csrfToken
-
       const isCreating = !courseId
-      const url = isCreating 
-        ? 'http://localhost:4000/api/courses'
-        : `http://localhost:4000/api/courses/${courseId}`
-      const method = isCreating ? 'POST' : 'PUT'
-
-      const res = await fetch(url, {
-        method,
-        credentials: 'include',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
-        },
-        body: JSON.stringify({
-          title: data.title,
-          description: data.description || null,
-          tenant_id: selectedTenantId,
-          chapters: data.chapters,
-        })
-      })
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        throw new Error(errorData.message || `Failed to ${isCreating ? 'create' : 'save'} course`)
-      }
-
-      const result = await res.json()
+      
       if (isCreating) {
+        const result = await api.createCourse(data.title, data.description, selectedTenantId)
         setCourseId(result.id)
         alert('Course created successfully')
       } else {
+        await api.updateCourse(courseId, data.title, data.description)
         alert('Course saved successfully')
       }
     } catch (err) {

@@ -80,6 +80,9 @@ router.post('/modules/complete', requireAuth, quizController.markModuleComplete)
 router.get('/analytics/quiz/:blockId', requireRoleAuth(['admin']), quizController.getQuizAnalytics)
 router.get('/analytics/course/:courseId/quizzes', requireRoleAuth(['admin']), quizController.getCourseQuizAnalytics)
 router.get('/analytics/quiz/:blockId/top-performers', requireRoleAuth(['admin']), quizController.getTopPerformers)
+router.get('/analytics/tenant', requireRoleAuth(['admin']), quizController.getTenantAnalytics)
+router.get('/analytics/tenant/courses', requireRoleAuth(['admin']), quizController.getTenantCourseAnalytics)
+router.get('/analytics/admin', requireRoleAuth(['admin']), quizController.getAdminDashboardAnalytics)
 
 // auth
 router.post('/auth/login', authController.login)

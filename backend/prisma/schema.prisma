@@ -165,6 +165,8 @@ model Enrollment {
   courseId   String
   userId     String
   enrolledAt DateTime @default(now())
+
+  @@unique([tenantId, courseId, userId])
 }
 
 model QuizAttempt {

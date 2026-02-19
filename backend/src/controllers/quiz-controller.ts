@@ -183,6 +183,61 @@ const getTopPerformers = async (req: Request, res: Response) => {
   }
 }
 
+const getTenantAnalytics = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId as string
+    const daysBack = req.query.daysBack ? parseInt(req.query.daysBack as string) : 30
+
+    if (!tenantId) {
+      return res.status(400).json({
+        error: 'tenantId is required',
+      })
+    }
+
+    const analytics = await quizAnalyticsService.getTenantQuizAnalytics(tenantId, daysBack)
+    res.json(analytics)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to get tenant analytics'
+    console.error('[getTenantAnalytics]', message)
+    res.status(400).json({ error: message })
+  }
+}
+
+const getAdminDashboardAnalytics = async (req: Request, res: Response) => {
+  try {
+    const analytics = await quizAnalyticsService.getAdminDashboardAnalytics()
+    res.json(analytics)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to get admin analytics'
+    console.error('[getAdminDashboardAnalytics]', message)
+    res.status(400).json({ error: message })
+  }
+}
+
+const getTenantCourseAnalytics = async (req: Request, res: Response) => {
+  try {
+    let tenantId = req.query.tenantId as string
+    
+    // If no tenantId provided, use the logged-in user's tenant
+    if (!tenantId) {
+      tenantId = req.user?.tenantId as string
+    }
+
+    if (!tenantId) {
+      return res.status(400).json({
+        error: 'tenantId is required',
+      })
+    }
+
+    const analytics = await quizAnalyticsService.getTenantCourseAnalytics(tenantId)
+    res.json(analytics)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to get tenant course analytics'
+    console.error('[getTenantCourseAnalytics]', message)
+    res.status(400).json({ error: message })
+  }
+}
+
 export default {
   submitQuizAttempt,
   checkModuleAccess,
@@ -192,4 +247,7 @@ export default {
   getQuizAnalytics,
   getCourseQuizAnalytics,
   getTopPerformers,
+  getTenantAnalytics,
+  getAdminDashboardAnalytics,
+  getTenantCourseAnalytics,
 }
