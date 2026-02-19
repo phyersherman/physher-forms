@@ -205,6 +205,74 @@ export async function changePassword(userId: string, currentPassword: string, ne
   })
 }
 
+// Email configuration
+export async function getEmailConfig(tenantId?: string) {
+  const url = tenantId ? `/email-config?tenantId=${tenantId}` : '/email-config'
+  return fetchJson(url, { method: 'GET' })
+}
+
+export async function getEmailConfigById(configId: string) {
+  return fetchJson(`/email-config/${configId}`, { method: 'GET' })
+}
+
+export async function listEmailConfigs(tenantId?: string | null) {
+  const url = tenantId !== undefined ? `/email-configs?tenantId=${tenantId}` : '/email-configs'
+  return fetchJson(url, { method: 'GET' })
+}
+
+export async function createEmailConfig(data: {
+  provider: string
+  apiKey: string
+  domain: string
+  fromEmail: string
+  fromName: string
+  replyToEmail?: string
+  isActive: boolean
+}, tenantId?: string) {
+  const url = tenantId ? `/email-config?tenantId=${tenantId}` : '/email-config'
+  return fetchJson(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateEmailConfig(configId: string, data: {
+  provider?: string
+  apiKey?: string
+  domain?: string
+  fromEmail?: string
+  fromName?: string
+  replyToEmail?: string
+  isActive?: boolean
+}) {
+  return fetchJson(`/email-config/${configId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteEmailConfig(configId: string) {
+  return fetchJson(`/email-config/${configId}`, { method: 'DELETE' })
+}
+
+export async function testEmailConfig(configId: string, recipientEmail: string) {
+  return fetchJson(`/email-config/${configId}/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipientEmail }),
+  })
+}
+
+export async function getEmailLogs(tenantId?: string, limit?: number) {
+  const params = new URLSearchParams()
+  if (tenantId) params.append('tenantId', tenantId)
+  if (limit) params.append('limit', limit.toString())
+  const url = `/email-logs${params.toString() ? `?${params.toString()}` : ''}`
+  return fetchJson(url, { method: 'GET' })
+}
+
 // Learner APIs
 export async function getModuleAccess(moduleId: string, courseId: string) {
   return fetchJson(`/modules/${moduleId}/courses/${courseId}/access`, { method: 'GET' })
@@ -279,6 +347,15 @@ export default {
   enableUser,
   inviteUser,
   changePassword,
+  // Email configuration
+  getEmailConfig,
+  getEmailConfigById,
+  listEmailConfigs,
+  createEmailConfig,
+  updateEmailConfig,
+  deleteEmailConfig,
+  testEmailConfig,
+  getEmailLogs,
   // Learner APIs
   getModuleAccess,
   getModule,
