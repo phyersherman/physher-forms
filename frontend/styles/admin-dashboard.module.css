@@ -1,3 +1,5 @@
+@import './shared.module.css';
+
 .dashboardGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -6,23 +8,12 @@
 }
 
 .card {
+  composes: card from './shared.module.css';
   display: flex;
   flex-direction: column;
   padding: 24px;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e0e0e0;
   text-decoration: none;
   color: inherit;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  cursor: pointer;
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  border-color: #667eea;
 }
 
 .cardIcon {
@@ -60,11 +51,7 @@
 }
 
 .infoSection {
-  background: white;
-  padding: 32px;
-  border-radius: 12px;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  composes: infoSection from './shared.module.css';
 }
 
 .infoSection h2 {

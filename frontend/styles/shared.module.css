@@ -1,0 +1,185 @@
+/**
+ * Shared CSS variables and common styles used across admin pages
+ * Provides a single source of truth for colors, spacing, shadows, and reusable components
+ */
+
+/* ===========================
+   Color Palette
+   =========================== */
+
+:root {
+  /* Primary Colors */
+  --color-primary-from: #667eea;
+  --color-primary-to: #764ba2;
+  --color-primary-hover: #764ba2;
+
+  /* Neutral Colors */
+  --color-text-primary: #333;
+  --color-text-secondary: #666;
+  --color-background: white;
+  --color-border: #e0e0e0;
+  --color-background-light: #f9f9f9;
+  --color-background-lighter: #f0f0f0;
+
+  /* Danger/Alert Colors */
+  --color-danger: #c62828;
+  --color-danger-light: #ffebee;
+  --color-danger-border: #ef5350;
+  --color-danger-light-hover: #ffcdd2;
+  --color-danger-border-hover: #e53935;
+
+  /* ===========================
+     Spacing
+     =========================== */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --spacing-3xl: 48px;
+
+  /* ===========================
+     Border Radius
+     =========================== */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* ===========================
+     Shadows
+     =========================== */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(102, 126, 234, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  /* ===========================
+     Typography
+     =========================== */
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 24px;
+
+  --font-weight-normal: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ===========================
+     Transitions
+     =========================== */
+  --transition-fast: all 0.2s ease;
+  --transition-normal: all 0.3s ease;
+}
+
+/* ===========================
+   Reusable Button Styles
+   =========================== */
+
+.buttonBase {
+  display: inline-block;
+  border: none;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  font-weight: var(--font-weight-semibold);
+  transition: var(--transition-fast);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.buttonPrimary {
+  composes: buttonBase;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: linear-gradient(135deg, var(--color-primary-from) 0%, var(--color-primary-to) 100%);
+  color: white;
+}
+
+.buttonPrimary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.buttonSecondary {
+  composes: buttonBase;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: var(--color-background-lighter);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  font-weight: var(--font-weight-normal);
+  font-size: var(--font-size-sm);
+}
+
+.buttonSecondary:hover {
+  background-color: #e8e8e8;
+  border-color: #d0d0d0;
+}
+
+.buttonDanger {
+  composes: buttonBase;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-border);
+  font-weight: var(--font-weight-normal);
+  font-size: var(--font-size-sm);
+}
+
+.buttonDanger:hover {
+  background-color: var(--color-danger-light-hover);
+  border-color: var(--color-danger-border-hover);
+}
+
+/* ===========================
+   Reusable Card/Container Styles
+   =========================== */
+
+.containerBase {
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.card {
+  composes: containerBase;
+  padding: var(--spacing-xl);
+  text-decoration: none;
+  color: inherit;
+  transition: var(--transition-normal);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary-from);
+}
+
+.tableWrapper {
+  composes: containerBase;
+  overflow: hidden;
+}
+
+.infoSection {
+  composes: containerBase;
+  padding: var(--spacing-2xl);
+}
+
+/* ===========================
+   Typography
+   =========================== */
+
+.textPrimary {
+  color: var(--color-text-primary);
+}
+
+.textSecondary {
+  color: var(--color-text-secondary);
+}
+
+.textMuted {
+  color: #999;
+  font-size: var(--font-size-sm);
+}

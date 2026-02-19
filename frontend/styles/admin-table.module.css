@@ -1,3 +1,5 @@
+@import './shared.module.css';
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -12,17 +14,7 @@
 }
 
 .primaryButton {
-  display: inline-block;
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
+  composes: buttonPrimary from './shared.module.css';
 }
 
 .primaryButton:hover {
@@ -31,17 +23,7 @@
 }
 
 .secondaryButton {
-  display: inline-block;
-  padding: 8px 16px;
-  background-color: #f0f0f0;
-  color: #333;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  font-size: 13px;
-  cursor: pointer;
+  composes: buttonSecondary from './shared.module.css';
 }
 
 .secondaryButton:hover {
@@ -64,11 +46,7 @@
 }
 
 .tableWrapper {
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e0e0e0;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  composes: tableWrapper from './shared.module.css';
 }
 
 .table {
@@ -121,17 +99,7 @@
 }
 
 .dangerButton {
-  display: inline-block;
-  padding: 8px 16px;
-  background-color: #ffebee;
-  color: #c62828;
-  border: 1px solid #ef5350;
-  border-radius: 6px;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  font-size: 13px;
-  cursor: pointer;
+  composes: buttonDanger from './shared.module.css';
 }
 
 .dangerButton:hover {
