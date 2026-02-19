@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import authService from '../services/authService'
+import * as emailService from '../services/emailService'
 
 function cookieOptions(maxAgeDays: number) {
   return {
@@ -80,6 +81,19 @@ const acceptInvite = async (req: Request, res: Response) => {
     }
     
     const user = await authService.acceptInvite(token, password)
+    
+    // Send welcome email (non-blocking)
+    try {
+      await emailService.sendWelcomeEmail(
+        user.email,
+        user.fullName || user.email,
+        user.tenantId
+      )
+    } catch (emailError: any) {
+      console.error('Failed to send welcome email:', emailError)
+      // Don't fail the request if welcome email fails
+    }
+    
     res.json({ 
       success: true, 
       message: 'Password set successfully. You can now login.',
@@ -110,15 +124,26 @@ const forgotPassword = async (req: Request, res: Response) => {
     // Pass tenantId if available from tenantResolver
     const result = await authService.forgotPassword(email, req.tenantId)
     
-    // TODO: In email service implementation, send reset email here using result.token
-    // For now, we'll include the token in the response for testing
-    // In production, this should only send email and return success
+    // Send reset email if user exists (result.token will be set)
+    if (result.token) {
+      try {
+        await emailService.sendResetPasswordEmail(
+          result.userEmail!,
+          result.userEmail!, // Use email as name fallback
+          result.token,
+          req.tenantId
+        )
+      } catch (emailError: any) {
+        console.error('Failed to send reset email:', emailError)
+        // Don't reveal email send failure to user
+      }
+    }
     
     // Always return success (don't reveal if email exists)
     res.json({ 
       success: true, 
       message: 'If an account exists with this email, a password reset link has been sent.',
-      // TEMP: Remove this in production, only for testing without email service
+      // TEMP: Include token in non-production for testing
       ...(process.env.NODE_ENV !== 'production' && result.token ? { resetToken: result.token } : {})
     })
   } catch (error: any) {

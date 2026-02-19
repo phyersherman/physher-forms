@@ -6,6 +6,7 @@
 
 import { Request, Response } from 'express'
 import * as userService from '../services/userService'
+import * as emailService from '../services/emailService'
 import { sanitizeString } from '../utils/validators'
 
 /**
@@ -296,14 +297,23 @@ export const inviteUser = async (req: Request, res: Response) => {
 
     const inviteData = await userService.inviteUser(userId)
     
-    // TODO: In email service implementation, send invite email here using inviteData
-    // For now, we'll include the token in the response for testing
-    // In production, this should only send email and return success
+    // Send invite email
+    try {
+      await emailService.sendInviteEmail(
+        inviteData.userEmail,
+        inviteData.userFullName || inviteData.userEmail,
+        inviteData.token,
+        inviteData.tenantId
+      )
+    } catch (emailError: any) {
+      console.error('Failed to send invite email:', emailError)
+      // Continue even if email fails - user can be re-invited
+    }
     
     res.json({ 
       success: true, 
       message: 'Invite sent successfully',
-      // TEMP: Remove this in production, only for testing without email service
+      // TEMP: Include token in non-production for testing
       ...(process.env.NODE_ENV !== 'production' ? { inviteToken: inviteData.token } : {})
     })
   } catch (error: any) {

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import tenantController from '../controllers/tenantController'
 import authController from '../controllers/authController'
 import * as userController from '../controllers/userController'
+import emailController from '../controllers/emailController'
 import requireAuth from '../middleware/authGuard'
 import { requireAuth as requireRoleAuth } from '../middleware/authGuard'
 import { authLimiter, inviteLimiter } from '../middleware/rateLimiters'
@@ -33,6 +34,16 @@ router.post('/tenants/:tenantId/users/:userId/invite', requireRoleAuth(['admin']
 
 // user self-service (any authenticated user)
 router.post('/users/:userId/password', requireAuth, userController.changePassword)
+
+// email configuration (admin)
+router.get('/email-config', requireRoleAuth(['admin']), emailController.getEmailConfig)
+router.get('/email-config/:id', requireRoleAuth(['admin']), emailController.getEmailConfigById)
+router.get('/email-configs', requireRoleAuth(['admin']), emailController.listEmailConfigs)
+router.post('/email-config', requireRoleAuth(['admin']), emailController.createEmailConfig)
+router.put('/email-config/:id', requireRoleAuth(['admin']), emailController.updateEmailConfig)
+router.delete('/email-config/:id', requireRoleAuth(['admin']), emailController.deleteEmailConfig)
+router.post('/email-config/:id/test', requireRoleAuth(['admin']), emailController.testEmailConfig)
+router.get('/email-logs', requireRoleAuth(['admin']), emailController.getEmailLogs)
 
 // global courses (admin - available across all tenants)
 router.get('/courses/global', requireRoleAuth(['admin']), courseController.listGlobalCourses)
