@@ -148,7 +148,7 @@ const TenantDetailPage: React.FC = () => {
 
         {/* Tenant Info Card */}
         <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, padding: 24, marginBottom: 32 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
             <div>
               <h1 style={{ margin: '0 0 8px 0', fontSize: 28, color: '#333' }}>{tenant.name}</h1>
               <p style={{ margin: 0, color: '#666', fontSize: 14 }}>Tenant ID: {tenant.id}</p>
@@ -164,6 +164,52 @@ const TenantDetailPage: React.FC = () => {
             >
               {editMode ? 'Cancel' : '✏️ Edit Tenant'}
             </button>
+          </div>
+
+          {/* Quick Actions */}
+          <div style={{ display: 'flex', gap: '12px', paddingTop: 16, borderTop: '1px solid #e2e8f0' }}>
+            <Link
+              href={`/admin/tenants/${tenantId}/users`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                textDecoration: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 600,
+                transition: 'transform 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              <span>👥</span>
+              <span>Manage Users</span>
+            </Link>
+            <Link
+              href={`/admin/tenants/${tenantId}/email-config`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                background: '#64748b',
+                color: 'white',
+                textDecoration: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 600,
+                transition: 'transform 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              <span>📧</span>
+              <span>Email Config</span>
+            </Link>
           </div>
 
           {editMode && (

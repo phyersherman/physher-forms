@@ -117,8 +117,32 @@ const TenantsPage: React.FC = () => {
                 cursor: 'pointer',
               }}
             >
-              <span className={styles.secondaryButton}>View Tenant</span>
+              <span className={styles.secondaryButton}>View</span>
             </button>
+            <Link
+              href={`/admin/tenants/${tenant.id}/users`}
+              style={{
+                border: 'none',
+                background: 'none',
+                padding: '0 8px 0 0',
+                cursor: 'pointer',
+                textDecoration: 'none',
+              }}
+            >
+              <span className={styles.secondaryButton}>Users</span>
+            </Link>
+            <Link
+              href={`/admin/tenants/${tenant.id}/email-config`}
+              style={{
+                border: 'none',
+                background: 'none',
+                padding: '0 8px 0 0',
+                cursor: 'pointer',
+                textDecoration: 'none',
+              }}
+            >
+              <span className={styles.secondaryButton}>Email</span>
+            </Link>
             <button
               onClick={() => handleDeleteTenant(tenant)}
               style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}

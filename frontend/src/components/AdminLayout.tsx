@@ -37,7 +37,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
         </div>
 
         <nav className={styles.nav}>
-          <Link href="/admin" className={`${styles.navItem} ${isActive('/admin') && !router.pathname.includes('/courses') && !router.pathname.includes('/tenants') ? styles.active : ''}`}>
+          <Link href="/admin" className={`${styles.navItem} ${isActive('/admin') && !router.pathname.includes('/courses') && !router.pathname.includes('/tenants') && !router.pathname.includes('/email-config') ? styles.active : ''}`}>
             <span className={styles.icon}>📊</span>
             <span className={styles.label}>Dashboard</span>
           </Link>
@@ -45,6 +45,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
           <Link href="/admin/tenants" className={`${styles.navItem} ${isActive('/admin/tenants') ? styles.active : ''}`}>
             <span className={styles.icon}>🏢</span>
             <span className={styles.label}>Tenants</span>
+          </Link>
+
+          <Link href="/admin/email-config" className={`${styles.navItem} ${router.pathname === '/admin/email-config' ? styles.active : ''}`}>
+            <span className={styles.icon}>📧</span>
+            <span className={styles.label}>Email Config</span>
           </Link>
         </nav>
 
