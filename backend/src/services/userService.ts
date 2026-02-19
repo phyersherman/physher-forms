@@ -260,3 +260,29 @@ export const enableUser = async (id: string) => {
     },
   })
 }
+
+/**
+ * Generates an invite token for a user and sets status to 'invited'
+ * Returns the token so it can be sent via email
+ */
+export const inviteUser = async (userId: string) => {
+  const user = await getUserById(userId)
+  if (!user) {
+    throw new Error('User not found')
+  }
+  
+  if (user.status === 'active' && user.lastLoginAt) {
+    throw new Error('User has already accepted their invite and logged in')
+  }
+  
+  const authService = await import('./authService')
+  const token = await authService.default.generateInviteToken(userId)
+  
+  return { 
+    token, 
+    userId: user.id, 
+    userEmail: user.email, 
+    userFullName: user.fullName,
+    tenantId: user.tenantId,
+  }
+}

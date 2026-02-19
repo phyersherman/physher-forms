@@ -67,4 +67,94 @@ const refresh = async (req: Request, res: Response) => {
   res.json({ user: { id: user.id, email: user.email, role: user.role, tenantId: user.tenantId } })
 }
 
-export default { login, register, logout, refresh }
+/**
+ * POST /auth/accept-invite
+ * User accepts an invite and sets their password
+ */
+const acceptInvite = async (req: Request, res: Response) => {
+  try {
+    const { token, password } = req.body
+    
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Token and password are required' })
+    }
+    
+    const user = await authService.acceptInvite(token, password)
+    res.json({ 
+      success: true, 
+      message: 'Password set successfully. You can now login.',
+      user: { id: user.id, email: user.email } 
+    })
+  } catch (error: any) {
+    console.error('Accept invite error:', error)
+    if (error.message.includes('Invalid') || error.message.includes('expired')) {
+      return res.status(400).json({ error: error.message })
+    }
+    res.status(500).json({ error: 'Failed to accept invite' })
+  }
+}
+
+/**
+ * POST /auth/forgot-password
+ * Initiates password reset flow
+ * Always returns 200 to avoid email enumeration
+ */
+const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' })
+    }
+    
+    // Pass tenantId if available from tenantResolver
+    const result = await authService.forgotPassword(email, req.tenantId)
+    
+    // TODO: In email service implementation, send reset email here using result.token
+    // For now, we'll include the token in the response for testing
+    // In production, this should only send email and return success
+    
+    // Always return success (don't reveal if email exists)
+    res.json({ 
+      success: true, 
+      message: 'If an account exists with this email, a password reset link has been sent.',
+      // TEMP: Remove this in production, only for testing without email service
+      ...(process.env.NODE_ENV !== 'production' && result.token ? { resetToken: result.token } : {})
+    })
+  } catch (error: any) {
+    console.error('Forgot password error:', error)
+    // Still return success to avoid revealing user existence
+    res.json({ 
+      success: true, 
+      message: 'If an account exists with this email, a password reset link has been sent.' 
+    })
+  }
+}
+
+/**
+ * POST /auth/reset-password
+ * Resets password using a valid reset token
+ */
+const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { token, password } = req.body
+    
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Token and password are required' })
+    }
+    
+    await authService.resetPassword(token, password)
+    res.json({ 
+      success: true, 
+      message: 'Password reset successfully. You can now login with your new password.' 
+    })
+  } catch (error: any) {
+    console.error('Reset password error:', error)
+    if (error.message.includes('Invalid') || error.message.includes('expired')) {
+      return res.status(400).json({ error: error.message })
+    }
+    res.status(500).json({ error: 'Failed to reset password' })
+  }
+}
+
+export default { login, register, logout, refresh, acceptInvite, forgotPassword, resetPassword }

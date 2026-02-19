@@ -4,6 +4,7 @@ import authController from '../controllers/authController'
 import * as userController from '../controllers/userController'
 import requireAuth from '../middleware/authGuard'
 import { requireAuth as requireRoleAuth } from '../middleware/authGuard'
+import { authLimiter, inviteLimiter } from '../middleware/rateLimiters'
 import courseController from '../controllers/courseController'
 import courseTemplateController from '../controllers/courseTemplateController'
 import quizController from '../controllers/quiz-controller'
@@ -28,6 +29,7 @@ router.put('/tenants/:tenantId/users/:userId', requireRoleAuth(['admin']), userC
 router.delete('/tenants/:tenantId/users/:userId', requireRoleAuth(['admin']), userController.deleteUser)
 router.post('/tenants/:tenantId/users/:userId/disable', requireRoleAuth(['admin']), userController.disableUser)
 router.post('/tenants/:tenantId/users/:userId/enable', requireRoleAuth(['admin']), userController.enableUser)
+router.post('/tenants/:tenantId/users/:userId/invite', requireRoleAuth(['admin']), inviteLimiter, userController.inviteUser)
 
 // user self-service (any authenticated user)
 router.post('/users/:userId/password', requireAuth, userController.changePassword)
@@ -98,10 +100,13 @@ router.get('/analytics/tenant/courses', requireRoleAuth(['admin']), quizControll
 router.get('/analytics/admin', requireRoleAuth(['admin']), quizController.getAdminDashboardAnalytics)
 
 // auth
-router.post('/auth/login', authController.login)
-router.post('/auth/register', authController.register)
+router.post('/auth/login', authLimiter, authController.login)
+router.post('/auth/register', authLimiter, authController.register)
 router.post('/auth/logout', authController.logout)
 router.post('/auth/refresh', authController.refresh)
+router.post('/auth/accept-invite', authLimiter, authController.acceptInvite)
+router.post('/auth/forgot-password', inviteLimiter, authController.forgotPassword)
+router.post('/auth/reset-password', authLimiter, authController.resetPassword)
 
 // protected example — any authenticated user
 router.get('/me', requireAuth, (req: Request, res: Response) => {

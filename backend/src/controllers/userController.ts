@@ -273,3 +273,47 @@ export const changePassword = async (req: Request, res: Response) => {
     res.status(400).json({ error: error.message || 'Failed to change password' })
   }
 }
+
+/**
+ * POST /api/tenants/:tenantId/users/:userId/invite
+ * Generates an invite token for a user (admin only)
+ */
+export const inviteUser = async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.params.tenantId as string
+    const userId = req.params.userId as string
+
+    // Verify admin belongs to this tenant
+    if (req.user?.tenantId !== tenantId || req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' })
+    }
+
+    // Verify user belongs to this tenant
+    const user = await userService.getUserById(userId)
+    if (!user || user.tenantId !== tenantId) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const inviteData = await userService.inviteUser(userId)
+    
+    // TODO: In email service implementation, send invite email here using inviteData
+    // For now, we'll include the token in the response for testing
+    // In production, this should only send email and return success
+    
+    res.json({ 
+      success: true, 
+      message: 'Invite sent successfully',
+      // TEMP: Remove this in production, only for testing without email service
+      ...(process.env.NODE_ENV !== 'production' ? { inviteToken: inviteData.token } : {})
+    })
+  } catch (error: any) {
+    console.error('Invite user error:', error)
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message })
+    }
+    if (error.message.includes('already')) {
+      return res.status(400).json({ error: error.message })
+    }
+    res.status(500).json({ error: error.message || 'Failed to invite user' })
+  }
+}

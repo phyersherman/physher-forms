@@ -82,4 +82,146 @@ const revokeRefreshToken = async (token: string) => {
   await prisma.refreshToken.updateMany({ where: { token }, data: { revoked: true } })
 }
 
-export default { register, authenticate, verifyToken, verifyRefreshToken, revokeRefreshToken, createRefreshToken, createAccessToken }
+/**
+ * Generates an invite token for a user
+ * Token expires in 72 hours
+ */
+const generateInviteToken = async (userId: string): Promise<string> => {
+  const token = crypto.randomBytes(48).toString('hex')
+  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000) // 72 hours
+  
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      inviteToken: token,
+      inviteExpires: expiresAt,
+      status: 'invited',
+    },
+  })
+  
+  return token
+}
+
+/**
+ * Accepts an invite and sets the user's password
+ * Token is single-use and cleared after acceptance
+ */
+const acceptInvite = async (token: string, password: string) => {
+  const user = await prisma.user.findUnique({ where: { inviteToken: token } })
+  
+  if (!user) {
+    throw new Error('Invalid invite token')
+  }
+  
+  if (!user.inviteExpires || user.inviteExpires < new Date()) {
+    throw new Error('Invite token has expired')
+  }
+  
+  // Validate password strength
+  const { isValidPassword } = await import('../utils/validators')
+  if (!isValidPassword(password)) {
+    throw new Error('Password must be at least 8 characters with at least 1 number and 1 letter')
+  }
+  
+  // Hash password and clear invite token
+  const hashedPassword = await bcrypt.hash(password, 10)
+  const updatedUser = await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password: hashedPassword,
+      status: 'active',
+      inviteToken: null,
+      inviteExpires: null,
+    },
+    select: {
+      id: true,
+      email: true,
+      fullName: true,
+      role: true,
+      tenantId: true,
+    },
+  })
+  
+  return updatedUser
+}
+
+/**
+ * Initiates password reset by generating a reset token
+ * Token expires in 1 hour
+ * Always returns success (don't reveal if email exists)
+ */
+const forgotPassword = async (email: string, tenantId?: string) => {
+  // Find user by email and optional tenantId
+  const user = tenantId
+    ? await prisma.user.findUnique({ where: { email_tenantId: { email, tenantId } } })
+    : await prisma.user.findFirst({ where: { email } })
+  
+  // Don't reveal if user exists (security best practice)
+  if (!user) {
+    return { success: true }
+  }
+  
+  // Generate reset token
+  const token = crypto.randomBytes(48).toString('hex')
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+  
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      resetToken: token,
+      resetExpires: expiresAt,
+    },
+  })
+  
+  // Return token so email service can send it
+  return { success: true, token, userId: user.id, userEmail: user.email }
+}
+
+/**
+ * Resets password using a valid reset token
+ * Token is single-use and cleared after reset
+ */
+const resetPassword = async (token: string, newPassword: string) => {
+  const user = await prisma.user.findUnique({ where: { resetToken: token } })
+  
+  if (!user) {
+    throw new Error('Invalid reset token')
+  }
+  
+  if (!user.resetExpires || user.resetExpires < new Date()) {
+    throw new Error('Reset token has expired')
+  }
+  
+  // Validate password strength
+  const { isValidPassword } = await import('../utils/validators')
+  if (!isValidPassword(newPassword)) {
+    throw new Error('Password must be at least 8 characters with at least 1 number and 1 letter')
+  }
+  
+  // Hash password and clear reset token
+  const hashedPassword = await bcrypt.hash(newPassword, 10)
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password: hashedPassword,
+      resetToken: null,
+      resetExpires: null,
+    },
+  })
+  
+  return { success: true }
+}
+
+export default { 
+  register, 
+  authenticate, 
+  verifyToken, 
+  verifyRefreshToken, 
+  revokeRefreshToken, 
+  createRefreshToken, 
+  createAccessToken,
+  generateInviteToken,
+  acceptInvite,
+  forgotPassword,
+  resetPassword,
+}
