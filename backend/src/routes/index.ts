@@ -6,6 +6,8 @@ import emailController from '../controllers/emailController'
 import enrollmentController from '../controllers/enrollmentController'
 import certificateController from '../controllers/certificate-controller'
 import registrationLinkController from '../controllers/registration-link-controller'
+import bulkUserController from '../controllers/bulk-user-controller'
+import bulkEnrollmentController from '../controllers/bulk-enrollment-controller'
 import requireAuth from '../middleware/authGuard'
 import { requireAuth as requireRoleAuth } from '../middleware/authGuard'
 import { authLimiter, inviteLimiter } from '../middleware/rateLimiters'
@@ -147,6 +149,18 @@ router.post('/registration-links/:id/toggle', requireRoleAuth(['admin']), regist
 // public registration link endpoints (no auth required)
 router.get('/public/registration-links/validate', registrationLinkController.validateRegistrationToken)
 router.post('/public/registration-links/register', authLimiter, registrationLinkController.registerViaLink)
+
+// bulk user operations (Phase 9 - Feature 4)
+router.post('/tenants/:tenantId/users/import-csv', requireRoleAuth(['admin']), bulkUserController.importUsersFromCSV)
+router.post('/tenants/:tenantId/users/bulk-create', requireRoleAuth(['admin']), bulkUserController.bulkCreateUsers)
+router.get('/tenants/:tenantId/bulk-imports', requireRoleAuth(['admin']), bulkUserController.getBulkImportJobs)
+router.get('/bulk-imports/:jobId', requireRoleAuth(['admin']), bulkUserController.getBulkImportJob)
+
+// bulk enrollment operations (Phase 9 - Feature 4)
+router.post('/enrollments/bulk-assign', requireRoleAuth(['admin']), bulkEnrollmentController.bulkAssignCourses)
+router.post('/enrollments/bulk-unassign', requireRoleAuth(['admin']), bulkEnrollmentController.bulkUnassignCourses)
+router.get('/tenants/:tenantId/users/:userId/courses', requireRoleAuth(['admin']), bulkEnrollmentController.getUserCourses)
+router.get('/tenants/:tenantId/courses/:courseId/enrollments', requireRoleAuth(['admin']), bulkEnrollmentController.getCourseEnrollments)
 
 // auth
 router.post('/auth/login', authLimiter, authController.login)

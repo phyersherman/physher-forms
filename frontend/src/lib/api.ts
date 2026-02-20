@@ -528,6 +528,84 @@ export async function registerViaLink(data: {
   })
 }
 
+// ========================================
+// Bulk User Operations (Phase 9 - Feature 4)
+// ========================================
+export async function importUsersFromCSV(
+  tenantId: string,
+  data: {
+    csvContent: string
+    sendInvites?: boolean
+    fileName?: string
+  }
+) {
+  return fetchJson(`/tenants/${tenantId}/users/import-csv`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function bulkCreateUsers(
+  tenantId: string,
+  data: {
+    users: Array<{
+      email: string
+      fullName?: string
+      role?: string
+      organization?: string
+    }>
+    sendInvites?: boolean
+  }
+) {
+  return fetchJson(`/tenants/${tenantId}/users/bulk-create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function getBulkImportJobs(tenantId: string) {
+  return fetchJson(`/tenants/${tenantId}/bulk-imports`, { method: 'GET' })
+}
+
+export async function getBulkImportJob(jobId: string) {
+  return fetchJson(`/bulk-imports/${jobId}`, { method: 'GET' })
+}
+
+// Bulk Enrollment Operations
+export async function bulkAssignCourses(data: {
+  userIds: string[]
+  courseIds: string[]
+  tenantId: string
+}) {
+  return fetchJson('/enrollments/bulk-assign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function bulkUnassignCourses(data: {
+  userIds: string[]
+  courseIds: string[]
+  tenantId: string
+}) {
+  return fetchJson('/enrollments/bulk-unassign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function getUserCourses(tenantId: string, userId: string) {
+  return fetchJson(`/tenants/${tenantId}/users/${userId}/courses`, { method: 'GET' })
+}
+
+export async function getCourseEnrollments(tenantId: string, courseId: string) {
+  return fetchJson(`/tenants/${tenantId}/courses/${courseId}/enrollments`, { method: 'GET' })
+}
+
 export default { 
   login, 
   logout,
@@ -610,4 +688,13 @@ export default {
   toggleRegistrationLink,
   validateRegistrationToken,
   registerViaLink,
+  // Bulk Operations (Phase 9)
+  importUsersFromCSV,
+  bulkCreateUsers,
+  getBulkImportJobs,
+  getBulkImportJob,
+  bulkAssignCourses,
+  bulkUnassignCourses,
+  getUserCourses,
+  getCourseEnrollments,
 }
