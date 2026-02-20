@@ -229,6 +229,56 @@ export async function changePassword(userId: string, currentPassword: string, ne
   })
 }
 
+// Global user management (platform-wide users)
+export async function getGlobalUsers() {
+  return fetchJson('/users', { method: 'GET' })
+}
+
+export async function getGlobalUser(userId: string) {
+  return fetchJson(`/users/${userId}`, { method: 'GET' })
+}
+
+export async function createGlobalUser(data: { 
+  email: string
+  fullName?: string
+  role: string
+  password?: string
+}) {
+  return fetchJson('/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateGlobalUser(userId: string, data: {
+  fullName?: string
+  role?: string
+  email?: string
+}) {
+  return fetchJson(`/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteGlobalUser(userId: string) {
+  return fetchJson(`/users/${userId}`, { method: 'DELETE' })
+}
+
+export async function disableGlobalUser(userId: string) {
+  return fetchJson(`/users/${userId}/disable`, { method: 'POST' })
+}
+
+export async function enableGlobalUser(userId: string) {
+  return fetchJson(`/users/${userId}/enable`, { method: 'POST' })
+}
+
+export async function inviteGlobalUser(userId: string) {
+  return fetchJson(`/users/${userId}/invite`, { method: 'POST' })
+}
+
 // Email configuration
 export async function getEmailConfig(tenantId?: string) {
   const url = tenantId ? `/email-config?tenantId=${tenantId}` : '/email-config'
@@ -340,6 +390,29 @@ export async function getAnalyticsTenantCourses(tenantId?: string) {
   return fetchJson(url, { method: 'GET' })
 }
 
+// ========================================
+// Enrollments (Phase 9 - Feature 1)
+// ========================================
+export async function enrollUser(userId: string, courseId: string, tenantId: string) {
+  return fetchJson('/enrollments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, courseId, tenantId }),
+  })
+}
+
+export async function getMyEnrollments() {
+  return fetchJson('/enrollments/me', { method: 'GET' })
+}
+
+export async function getEnrollmentProgress(enrollmentId: string) {
+  return fetchJson(`/enrollments/${enrollmentId}/progress`, { method: 'GET' })
+}
+
+export async function unenrollUser(enrollmentId: string) {
+  return fetchJson(`/enrollments/${enrollmentId}`, { method: 'DELETE' })
+}
+
 export default { 
   login, 
   logout,
@@ -374,6 +447,15 @@ export default {
   enableUser,
   inviteUser,
   changePassword,
+  // Global user management
+  getGlobalUsers,
+  getGlobalUser,
+  createGlobalUser,
+  updateGlobalUser,
+  deleteGlobalUser,
+  disableGlobalUser,
+  enableGlobalUser,
+  inviteGlobalUser,
   // Email configuration
   getEmailConfig,
   getEmailConfigById,
@@ -393,4 +475,9 @@ export default {
   // Analytics
   getAnalyticsAdmin,
   getAnalyticsTenantCourses,
+  // Enrollments (Phase 9)
+  enrollUser,
+  getMyEnrollments,
+  getEnrollmentProgress,
+  unenrollUser,
 }

@@ -2,59 +2,63 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAuth } from '../src/auth/AuthProvider'
+import api from '../src/lib/api'
 import styles from '../styles/admin-dashboard.module.css'
 
-interface CourseAnalytics {
+interface EnrollmentWithProgress {
+  id: string
   courseId: string
-  courseName: string
-  totalAttempts: number
-  uniqueUsers: number
-  averageScore: number
-  passRate: number
-  moduleCount: number
-}
-
-interface LearnerAnalytics {
-  tenantId: string
-  totalAttempts: number
-  uniqueUsers: number
-  courseCount: number
-  averageScore: number
-  passRate: number
-  courses: CourseAnalytics[]
+  enrolledAt: string
+  completedAt: string | null
+  certificateId: string | null
+  course: {
+    id: string
+    title: string
+    description: string | null
+  }
+  progress: {
+    totalModules: number
+    completedModules: number
+    percentComplete: number
+    requiredModulesComplete: number
+    requiredModulesTotal: number
+    canReceiveCertificate: boolean
+  }
 }
 
 const Dashboard: React.FC = () => {
   const router = useRouter()
   const { user } = useAuth()
-  const [analytics, setAnalytics] = useState<LearnerAnalytics | null>(null)
+  const [enrollments, setEnrollments] = useState<EnrollmentWithProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
     if (!user) return
 
-    const fetchAnalytics = async () => {
+    const fetchEnrollments = async () => {
       try {
-        const res = await fetch('/api/analytics/tenant', {
-          credentials: 'include',
-        })
-        if (!res.ok) throw new Error('Failed to load analytics')
-        const data = await res.json()
-        setAnalytics(data)
+        const data = await api.getMyEnrollments()
+        setEnrollments(data)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load analytics')
+        setError(err instanceof Error ? err.message : 'Failed to load enrollments')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchAnalytics()
+    fetchEnrollments()
   }, [user])
 
   if (!user) {
     return <div style={{ padding: '24px', textAlign: 'center' }}>Loading...</div>
   }
+
+  const completedCourses = enrollments.filter(e => e.completedAt).length
+  const inProgressCourses = enrollments.filter(e => !e.completedAt).length
+  const totalProgress = enrollments.length > 0
+    ? Math.round(enrollments.reduce((sum, e) => sum + e.progress.percentComplete, 0) / enrollments.length)
+    : 0
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
@@ -66,16 +70,16 @@ const Dashboard: React.FC = () => {
         }}
       >
         <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px' }}>
-          Welcome back, {user.email}!
+          Welcome back, {user.fullName || user.email}!
         </h1>
-        <p style={{ color: '#666' }}>Your learning progress and analytics</p>
+        <p style={{ color: '#666' }}>Continue your learning journey</p>
       </div>
 
       {loading ? (
-        <div style={{ padding: '24px', textAlign: 'center' }}>Loading analytics...</div>
+        <div style={{ padding: '24px', textAlign: 'center' }}>Loading your courses...</div>
       ) : error ? (
         <div style={{ padding: '24px', color: 'red', textAlign: 'center' }}>{error}</div>
-      ) : analytics ? (
+      ) : (
         <>
           {/* Overall Stats */}
           <div
@@ -95,10 +99,10 @@ const Dashboard: React.FC = () => {
               }}
             >
               <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                Total Quiz Attempts
+                Total Courses
               </div>
               <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#1976d2' }}>
-                {analytics.totalAttempts}
+                {enrollments.length}
               </div>
             </div>
             <div
@@ -110,25 +114,10 @@ const Dashboard: React.FC = () => {
               }}
             >
               <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                Courses Enrolled
-              </div>
-              <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#388e3c' }}>
-                {analytics.courseCount}
-              </div>
-            </div>
-            <div
-              style={{
-                padding: '16px',
-                background: '#f5f5f5',
-                borderRadius: '8px',
-                border: '1px solid #e0e0e0',
-              }}
-            >
-              <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                Your Average Score
+                In Progress
               </div>
               <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#f57c00' }}>
-                {analytics.averageScore}%
+                {inProgressCourses}
               </div>
             </div>
             <div
@@ -140,105 +129,214 @@ const Dashboard: React.FC = () => {
               }}
             >
               <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                Your Pass Rate
+                Completed
+              </div>
+              <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#388e3c' }}>
+                {completedCourses}
+              </div>
+            </div>
+            <div
+              style={{
+                padding: '16px',
+                background: '#f5f5f5',
+                borderRadius: '8px',
+                border: '1px solid #e0e0e0',
+              }}
+            >
+              <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+                Overall Progress
               </div>
               <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#c2185b' }}>
-                {analytics.passRate}%
+                {totalProgress}%
               </div>
             </div>
           </div>
 
-          {/* Course List */}
-          {analytics.courses.length > 0 && (
+          {/* Course Cards */}
+          {enrollments.length > 0 ? (
             <div>
               <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px' }}>
-                📚 Your Courses
+                📚 My Courses
               </h2>
               <div
                 style={{
-                  overflowX: 'auto',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                  gap: '20px',
                 }}
               >
-                <table
-                  style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    fontSize: '14px',
-                  }}
-                >
-                  <thead>
-                    <tr style={{ borderBottom: '2px solid #1976d2' }}>
-                      <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>
-                        Course Name
-                      </th>
-                      <th style={{ textAlign: 'center', padding: '12px', fontWeight: 600 }}>
-                        Attempts
-                      </th>
-                      <th style={{ textAlign: 'center', padding: '12px', fontWeight: 600 }}>
-                        Avg Score
-                      </th>
-                      <th style={{ textAlign: 'center', padding: '12px', fontWeight: 600 }}>
-                        Pass Rate
-                      </th>
-                      <th style={{ textAlign: 'center', padding: '12px', fontWeight: 600 }}>
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analytics.courses.map((course) => (
-                      <tr
-                        key={course.courseId}
-                        style={{
-                          borderBottom: '1px solid #e0e0e0',
-                          background: course.passRate >= 70 ? '#f1f8f4' : '#fff8f1',
-                        }}
-                      >
-                        <td style={{ padding: '12px', fontWeight: 500 }}>{course.courseName}</td>
-                        <td style={{ textAlign: 'center', padding: '12px' }}>
-                          {course.totalAttempts}
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '12px' }}>
-                          {course.averageScore}%
-                        </td>
-                        <td
+                {enrollments.map((enrollment) => (
+                  <div
+                    key={enrollment.id}
+                    style={{
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '8px',
+                      padding: '20px',
+                      background: '#fff',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                    }}
+                  >
+                    {/* Course Title */}
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0 }}>
+                      {enrollment.course.title}
+                    </h3>
+
+                    {/* Description */}
+                    {enrollment.course.description && (
+                      <p style={{ fontSize: '14px', color: '#666', margin: 0, lineHeight: '1.4' }}>
+                        {enrollment.course.description.length > 100
+                          ? enrollment.course.description.substring(0, 100) + '...'
+                          : enrollment.course.description}
+                      </p>
+                    )}
+
+                    {/* Status Badge */}
+                    <div>
+                      {enrollment.completedAt ? (
+                        <span
                           style={{
-                            textAlign: 'center',
-                            padding: '12px',
-                            color: course.passRate >= 70 ? '#388e3c' : '#f57c00',
-                            fontWeight: 600,
+                            display: 'inline-block',
+                            padding: '4px 12px',
+                            background: '#e8f5e9',
+                            color: '#2e7d32',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '600',
                           }}
                         >
-                          {course.passRate}%
-                        </td>
-                        <td style={{ textAlign: 'center', padding: '12px' }}>
-                          <Link
-                            href={`/course/${course.courseId}`}
-                            style={{
-                              color: '#1976d2',
-                              textDecoration: 'none',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            View →
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          ✓ Completed
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '4px 12px',
+                            background: '#fff3e0',
+                            color: '#e65100',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                          }}
+                        >
+                          In Progress
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          marginBottom: '6px',
+                          fontSize: '12px',
+                          color: '#666',
+                        }}
+                      >
+                        <span>Progress</span>
+                        <span style={{ fontWeight: '600' }}>
+                          {enrollment.progress.completedModules} / {enrollment.progress.totalModules} modules
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '8px',
+                          background: '#e0e0e0',
+                          borderRadius: '4px',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${enrollment.progress.percentComplete}%`,
+                            height: '100%',
+                            background: enrollment.completedAt ? '#4caf50' : '#2196f3',
+                            transition: 'width 0.3s ease',
+                          }}
+                        />
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#1976d2',
+                          marginTop: '4px',
+                        }}
+                      >
+                        {enrollment.progress.percentComplete}%
+                      </div>
+                    </div>
+
+                    {/* Certificate Badge */}
+                    {enrollment.certificateId && (
+                      <div>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            background: '#e3f2fd',
+                            color: '#1565c0',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                          }}
+                        >
+                          🏆 Certificate Available
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div style={{ marginTop: 'auto', paddingTop: '12px' }}>
+                      <Link
+                        href={`/course/${enrollment.courseId}`}
+                        style={{
+                          display: 'block',
+                          textAlign: 'center',
+                          padding: '10px',
+                          background: '#1976d2',
+                          color: '#fff',
+                          borderRadius: '4px',
+                          textDecoration: 'none',
+                          fontWeight: '600',
+                          fontSize: '14px',
+                        }}
+                      >
+                        {enrollment.completedAt ? 'Review Course' : 'Continue Learning'}
+                      </Link>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          )}
-
-          {analytics.courses.length === 0 && (
-            <div style={{ padding: '24px', color: '#999', textAlign: 'center' }}>
-              No courses yet. Explore available courses to get started!
+          ) : (
+            <div
+              style={{
+                padding: '60px 24px',
+                textAlign: 'center',
+                background: '#f9f9f9',
+                borderRadius: '8px',
+                border: '1px dashed #ccc',
+              }}
+            >
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
+              <h3 style={{ fontSize: '20px', marginBottom: '8px', color: '#333' }}>
+                No Courses Yet
+              </h3>
+              <p style={{ color: '#666', marginBottom: '20px' }}>
+                You haven't been enrolled in any courses yet. Contact your administrator to get started!
+              </p>
             </div>
           )}
         </>
-      ) : null}
+      )}
     </div>
   )
 }
