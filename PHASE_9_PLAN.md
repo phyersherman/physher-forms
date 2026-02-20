@@ -256,6 +256,48 @@ interface CertificateData {
 - [ ] Add certificate download button to dashboard
 - [ ] Create certificate template editor UI (optional, can use defaults first)
 
+### 2.5 Certificate Enhancements (Future)
+
+**Sprint 3 Implementation Status:** ✅ **COMPLETE**
+- ✅ Certificate service with full CRUD operations
+- ✅ Unique certificate number generation (CERT-YYYY-XXXXXXXX)
+- ✅ PDF generation infrastructure (placeholder text, ready for pdfkit)
+- ✅ File storage system (backend/certificates/)
+- ✅ 5 REST API endpoints (generate, list, get, download, delete)
+- ✅ Frontend API client methods
+- ✅ Dashboard download button for completed courses
+
+**Recommended Enhancements:**
+1. **PDF Design with pdfkit:**
+   - Install: `npm install pdfkit @types/pdfkit`
+   - Replace text placeholder with professional PDF layout
+   - Add border decoration, certificate styling
+   - Include tenant logo and signature images
+
+2. **Tenant Branding Integration:**
+   - Fetch tenant theme config (colors, logo URL)
+   - Apply brand colors to certificate design
+   - Use tenant name in certificate footer
+   - Optional: Custom certificate templates per tenant
+
+3. **Certificate Template System:**
+   - Create `CertificateTemplate` model with design options
+   - Admin UI to customize certificate design
+   - Color pickers, logo upload, signature upload
+   - Live preview of certificate design
+
+4. **Automatic Generation:**
+   - Trigger certificate generation when course is marked complete
+   - Update `markCourseComplete()` in enrollmentService
+   - Call `certificateService.generateCertificate()` automatically
+   - No manual admin action required
+
+5. **Certificate Verification:**
+   - Public endpoint: `GET /verify/:certificateNumber`
+   - Show certificate validity without authentication
+   - Display recipient name, course, issue date
+   - Useful for employers verifying credentials
+
 ---
 
 ## Feature 3: Registration Links (Auto-Enrollment)
