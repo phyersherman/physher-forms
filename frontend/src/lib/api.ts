@@ -456,6 +456,78 @@ export async function deleteCertificate(certificateId: string) {
   return fetchJson(`/certificates/${certificateId}`, { method: 'DELETE' })
 }
 
+// ========================================
+// Registration Links (Phase 9 - Feature 3)
+// ========================================
+export async function createRegistrationLink(
+  tenantId: string,
+  data: {
+    courseIds: string[]
+    name: string
+    maxUses?: number
+    expiresAt?: string
+  }
+) {
+  return fetchJson(`/tenants/${tenantId}/registration-links`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function getRegistrationLinks(tenantId: string) {
+  return fetchJson(`/tenants/${tenantId}/registration-links`, { method: 'GET' })
+}
+
+export async function getRegistrationLink(id: string) {
+  return fetchJson(`/registration-links/${id}`, { method: 'GET' })
+}
+
+export async function updateRegistrationLink(
+  id: string,
+  data: {
+    name?: string
+    courseIds?: string[]
+    maxUses?: number | null
+    expiresAt?: string | null
+    isActive?: boolean
+  }
+) {
+  return fetchJson(`/registration-links/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteRegistrationLink(id: string) {
+  return fetchJson(`/registration-links/${id}`, { method: 'DELETE' })
+}
+
+export async function toggleRegistrationLink(id: string) {
+  return fetchJson(`/registration-links/${id}/toggle`, { method: 'POST' })
+}
+
+// Public registration link endpoints (no auth required)
+export async function validateRegistrationToken(token: string) {
+  return fetchJson(`/public/registration-links/validate?token=${encodeURIComponent(token)}`, {
+    method: 'GET'
+  })
+}
+
+export async function registerViaLink(data: {
+  token: string
+  email: string
+  fullName: string
+  password: string
+}) {
+  return fetchJson('/public/registration-links/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
 export default { 
   login, 
   logout,
@@ -529,4 +601,13 @@ export default {
   getCertificate,
   downloadCertificate,
   deleteCertificate,
+  // Registration Links (Phase 9)
+  createRegistrationLink,
+  getRegistrationLinks,
+  getRegistrationLink,
+  updateRegistrationLink,
+  deleteRegistrationLink,
+  toggleRegistrationLink,
+  validateRegistrationToken,
+  registerViaLink,
 }

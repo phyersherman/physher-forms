@@ -5,6 +5,7 @@ import * as userController from '../controllers/userController'
 import emailController from '../controllers/emailController'
 import enrollmentController from '../controllers/enrollmentController'
 import certificateController from '../controllers/certificate-controller'
+import registrationLinkController from '../controllers/registration-link-controller'
 import requireAuth from '../middleware/authGuard'
 import { requireAuth as requireRoleAuth } from '../middleware/authGuard'
 import { authLimiter, inviteLimiter } from '../middleware/rateLimiters'
@@ -134,6 +135,18 @@ router.get('/certificates/me', requireAuth, certificateController.getMyCertifica
 router.get('/certificates/:certificateId', requireAuth, certificateController.getCertificate)
 router.get('/certificates/:certificateId/download', requireAuth, certificateController.downloadCertificate)
 router.delete('/certificates/:certificateId', requireRoleAuth(['admin']), certificateController.deleteCertificate)
+
+// registration links (Phase 9 - Feature 3)
+router.post('/tenants/:tenantId/registration-links', requireRoleAuth(['admin']), registrationLinkController.createRegistrationLink)
+router.get('/tenants/:tenantId/registration-links', requireRoleAuth(['admin']), registrationLinkController.getRegistrationLinks)
+router.get('/registration-links/:id', requireRoleAuth(['admin']), registrationLinkController.getRegistrationLink)
+router.put('/registration-links/:id', requireRoleAuth(['admin']), registrationLinkController.updateRegistrationLink)
+router.delete('/registration-links/:id', requireRoleAuth(['admin']), registrationLinkController.deleteRegistrationLink)
+router.post('/registration-links/:id/toggle', requireRoleAuth(['admin']), registrationLinkController.toggleRegistrationLink)
+
+// public registration link endpoints (no auth required)
+router.get('/public/registration-links/validate', registrationLinkController.validateRegistrationToken)
+router.post('/public/registration-links/register', authLimiter, registrationLinkController.registerViaLink)
 
 // auth
 router.post('/auth/login', authLimiter, authController.login)
