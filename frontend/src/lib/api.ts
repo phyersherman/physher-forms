@@ -413,6 +413,49 @@ export async function unenrollUser(enrollmentId: string) {
   return fetchJson(`/enrollments/${enrollmentId}`, { method: 'DELETE' })
 }
 
+// ========================================
+// Certificates (Phase 9 - Feature 2)
+// ========================================
+export async function generateCertificate(
+  enrollmentId: string,
+  userId: string,
+  courseId: string,
+  tenantId: string
+) {
+  return fetchJson('/certificates/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enrollmentId, userId, courseId, tenantId }),
+  })
+}
+
+export async function getMyCertificates() {
+  return fetchJson('/certificates/me', { method: 'GET' })
+}
+
+export async function getCertificate(certificateId: string) {
+  return fetchJson(`/certificates/${certificateId}`, { method: 'GET' })
+}
+
+export async function downloadCertificate(certificateId: string) {
+  // For file downloads, we use a different approach - open in new window or trigger download
+  const token = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('token='))
+    ?.split('=')[1]
+  
+  if (!token) {
+    throw new Error('Not authenticated')
+  }
+  
+  // Open download URL in current window to trigger download
+  window.location.href = `${API_BASE}/certificates/${certificateId}/download`
+}
+
+export async function deleteCertificate(certificateId: string) {
+  return fetchJson(`/certificates/${certificateId}`, { method: 'DELETE' })
+}
+
 export default { 
   login, 
   logout,
@@ -480,4 +523,10 @@ export default {
   getMyEnrollments,
   getEnrollmentProgress,
   unenrollUser,
+  // Certificates (Phase 9)
+  generateCertificate,
+  getMyCertificates,
+  getCertificate,
+  downloadCertificate,
+  deleteCertificate,
 }

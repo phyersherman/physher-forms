@@ -4,6 +4,7 @@ import authController from '../controllers/authController'
 import * as userController from '../controllers/userController'
 import emailController from '../controllers/emailController'
 import enrollmentController from '../controllers/enrollmentController'
+import certificateController from '../controllers/certificate-controller'
 import requireAuth from '../middleware/authGuard'
 import { requireAuth as requireRoleAuth } from '../middleware/authGuard'
 import { authLimiter, inviteLimiter } from '../middleware/rateLimiters'
@@ -126,6 +127,13 @@ router.post('/enrollments', requireRoleAuth(['admin']), enrollmentController.enr
 router.get('/enrollments/me', requireAuth, enrollmentController.getMyEnrollments)
 router.get('/enrollments/:enrollmentId/progress', requireAuth, enrollmentController.getEnrollmentProgress)
 router.delete('/enrollments/:enrollmentId', requireRoleAuth(['admin']), enrollmentController.unenrollUser)
+
+// certificates (Phase 9 - Feature 2)
+router.post('/certificates/generate', requireRoleAuth(['admin']), certificateController.generateCertificate)
+router.get('/certificates/me', requireAuth, certificateController.getMyCertificates)
+router.get('/certificates/:certificateId', requireAuth, certificateController.getCertificate)
+router.get('/certificates/:certificateId/download', requireAuth, certificateController.downloadCertificate)
+router.delete('/certificates/:certificateId', requireRoleAuth(['admin']), certificateController.deleteCertificate)
 
 // auth
 router.post('/auth/login', authLimiter, authController.login)

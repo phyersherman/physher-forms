@@ -294,7 +294,7 @@ const Dashboard: React.FC = () => {
                     )}
 
                     {/* Action Buttons */}
-                    <div style={{ marginTop: 'auto', paddingTop: '12px' }}>
+                    <div style={{ marginTop: 'auto', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <Link
                         href={`/course/${enrollment.courseId}`}
                         style={{
@@ -311,6 +311,23 @@ const Dashboard: React.FC = () => {
                       >
                         {enrollment.completedAt ? 'Review Course' : 'Continue Learning'}
                       </Link>
+                      {enrollment.certificateId && (
+                        <button
+                          onClick={() => api.downloadCertificate(enrollment.certificateId!)}
+                          style={{
+                            padding: '10px',
+                            background: '#4caf50',
+                            color: '#fff',
+                            borderRadius: '4px',
+                            border: 'none',
+                            fontWeight: '600',
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          📄 Download Certificate
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
