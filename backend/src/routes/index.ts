@@ -8,6 +8,8 @@ import certificateController from '../controllers/certificate-controller'
 import registrationLinkController from '../controllers/registration-link-controller'
 import bulkUserController from '../controllers/bulk-user-controller'
 import bulkEnrollmentController from '../controllers/bulk-enrollment-controller'
+import * as passwordlessAuthController from '../controllers/passwordless-auth-controller'
+import * as passwordlessLinkController from '../controllers/passwordless-link-controller'
 import requireAuth from '../middleware/authGuard'
 import { requireAuth as requireRoleAuth } from '../middleware/authGuard'
 import { authLimiter, inviteLimiter } from '../middleware/rateLimiters'
@@ -161,6 +163,24 @@ router.post('/enrollments/bulk-assign', requireRoleAuth(['admin']), bulkEnrollme
 router.post('/enrollments/bulk-unassign', requireRoleAuth(['admin']), bulkEnrollmentController.bulkUnassignCourses)
 router.get('/tenants/:tenantId/users/:userId/courses', requireRoleAuth(['admin']), bulkEnrollmentController.getUserCourses)
 router.get('/tenants/:tenantId/courses/:courseId/enrollments', requireRoleAuth(['admin']), bulkEnrollmentController.getCourseEnrollments)
+
+// passwordless access links (Phase 9 - Feature 5) - Admin management
+router.post('/tenants/:tenantId/passwordless-links', requireRoleAuth(['admin']), passwordlessLinkController.createPasswordlessLink)
+router.get('/tenants/:tenantId/passwordless-links', requireRoleAuth(['admin']), passwordlessLinkController.getPasswordlessLinks)
+router.get('/passwordless-links/:id', requireRoleAuth(['admin']), passwordlessLinkController.getPasswordlessLinkById)
+router.put('/passwordless-links/:id', requireRoleAuth(['admin']), passwordlessLinkController.updatePasswordlessLink)
+router.delete('/passwordless-links/:id', requireRoleAuth(['admin']), passwordlessLinkController.deletePasswordlessLink)
+router.post('/passwordless-links/:id/toggle', requireRoleAuth(['admin']), passwordlessLinkController.togglePasswordlessLink)
+
+// passwordless authentication (Phase 9 - Feature 5) - Public endpoints
+router.get('/public/passwordless-links/validate', passwordlessAuthController.validatePasswordlessToken)
+router.post('/public/passwordless-links/register', authLimiter, passwordlessAuthController.registerViaPasswordlessLink)
+router.post('/public/auth/send-code', authLimiter, passwordlessAuthController.sendMagicCode)
+router.post('/public/auth/verify-code', authLimiter, passwordlessAuthController.verifyMagicCode)
+router.post('/public/auth/resend-code', authLimiter, passwordlessAuthController.resendMagicCode)
+
+// magic code cleanup (admin - for cron jobs)
+router.post('/admin/magic-codes/cleanup', requireRoleAuth(['admin']), passwordlessAuthController.cleanupExpiredCodes)
 
 // auth
 router.post('/auth/login', authLimiter, authController.login)

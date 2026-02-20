@@ -606,6 +606,102 @@ export async function getCourseEnrollments(tenantId: string, courseId: string) {
   return fetchJson(`/tenants/${tenantId}/courses/${courseId}/enrollments`, { method: 'GET' })
 }
 
+// Passwordless Access Links (Phase 9 - Feature 5) - Admin management
+export async function createPasswordlessLink(
+  tenantId: string,
+  data: {
+    name: string
+    courseIds: string[]
+    organization?: string
+    maxUses?: number
+    expiresAt?: string
+  }
+) {
+  return fetchJson(`/tenants/${tenantId}/passwordless-links`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function getPasswordlessLinks(tenantId: string, courseId?: string) {
+  const url = courseId 
+    ? `/tenants/${tenantId}/passwordless-links?courseId=${courseId}`
+    : `/tenants/${tenantId}/passwordless-links`
+  return fetchJson(url, { method: 'GET' })
+}
+
+export async function getPasswordlessLink(linkId: string) {
+  return fetchJson(`/passwordless-links/${linkId}`, { method: 'GET' })
+}
+
+export async function updatePasswordlessLink(
+  linkId: string,
+  data: {
+    name?: string
+    organization?: string
+    maxUses?: number
+    expiresAt?: string
+    isActive?: boolean
+  }
+) {
+  return fetchJson(`/passwordless-links/${linkId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deletePasswordlessLink(linkId: string) {
+  return fetchJson(`/passwordless-links/${linkId}`, { method: 'DELETE' })
+}
+
+export async function togglePasswordlessLink(linkId: string) {
+  return fetchJson(`/passwordless-links/${linkId}/toggle`, { method: 'POST' })
+}
+
+// Passwordless Authentication (Phase 9 - Feature 5) - Public endpoints
+export async function validatePasswordlessToken(token: string) {
+  return fetchJson(`/public/passwordless-links/validate?token=${token}`, { method: 'GET' })
+}
+
+export async function registerViaPasswordlessLink(data: {
+  token: string
+  fullName: string
+  email: string
+  organization?: string
+}) {
+  return fetchJson('/public/passwordless-links/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function sendMagicCode(email: string) {
+  return fetchJson('/public/auth/send-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+}
+
+export async function verifyMagicCode(email: string, code: string) {
+  return fetchJson('/public/auth/verify-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+  })
+}
+
+export async function resendMagicCode(email: string) {
+  return fetchJson('/public/auth/resend-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+}
+
 export default { 
   login, 
   logout,
@@ -697,4 +793,16 @@ export default {
   bulkUnassignCourses,
   getUserCourses,
   getCourseEnrollments,
+  // Passwordless Authentication (Phase 9 - Feature 5)
+  createPasswordlessLink,
+  getPasswordlessLinks,
+  getPasswordlessLink,
+  updatePasswordlessLink,
+  deletePasswordlessLink,
+  togglePasswordlessLink,
+  validatePasswordlessToken,
+  registerViaPasswordlessLink,
+  sendMagicCode,
+  verifyMagicCode,
+  resendMagicCode,
 }
