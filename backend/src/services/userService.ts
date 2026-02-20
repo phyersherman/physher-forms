@@ -56,21 +56,21 @@ export const getUserById = async (id: string) => {
 }
 
 /**
- * Creates a new user in a tenant
+ * Creates a new user in a tenant or as a global user
  * Password is optional - if not provided, user will be in 'invited' status
  */
-export const createUser = async (data: {
-  email: string
-  tenantId: string
-  role: string
-  fullName?: string
+export const createUser = async (
+  tenantId: string | null,
+  email: string,
+  fullName: string | undefined,
+  role: string,
   password?: string
-}) => {
+) => {
   // Validate inputs
-  if (!isValidEmail(data.email)) {
+  if (!isValidEmail(email)) {
     throw new Error('Invalid email format')
   }
-  if (!isValidRole(data.role)) {
+  if (!isValidRole(role)) {
     throw new Error('Invalid role. Must be admin, instructor, or learner')
   }
 
@@ -78,36 +78,36 @@ export const createUser = async (data: {
   let hashedPassword: string | undefined
   let status = 'active'
   
-  if (data.password) {
-    if (!isValidPassword(data.password)) {
+  if (password) {
+    if (!isValidPassword(password)) {
       throw new Error('Password must be at least 8 characters with at least 1 number and 1 letter')
     }
-    hashedPassword = await bcrypt.hash(data.password, 10)
+    hashedPassword = await bcrypt.hash(password, 10)
   } else {
     // No password = user needs to be invited
     status = 'invited'
   }
 
-  // Check for duplicate email in this tenant
-  const existing = await prisma.user.findUnique({
+  // Check for duplicate email in this tenant (or global if tenantId is null)
+  // Note: Use findFirst instead of findUnique because tenantId can be null
+  const existing = await prisma.user.findFirst({
     where: { 
-      email_tenantId: { 
-        email: data.email, 
-        tenantId: data.tenantId 
-      } 
+      email: email, 
+      tenantId: tenantId 
     },
   })
   if (existing) {
-    throw new Error('User with this email already exists in this tenant')
+    const scope = tenantId ? 'this tenant' : 'global users'
+    throw new Error(`User with this email already exists in ${scope}`)
   }
 
   const user = await prisma.user.create({
     data: {
-      email: data.email,
+      email: email,
       password: hashedPassword,
-      fullName: data.fullName,
-      role: data.role,
-      tenantId: data.tenantId,
+      fullName: fullName,
+      role: role,
+      tenantId: tenantId,
       status,
     },
     select: {
@@ -285,4 +285,27 @@ export const inviteUser = async (userId: string) => {
     userFullName: user.fullName,
     tenantId: user.tenantId,
   }
+}
+/**
+ * Lists all global users (users not tied to a tenant)
+ * Optionally filter by role
+ */
+export const listGlobalUsers = async (role?: string) => {
+  const where: any = { tenantId: null }
+  if (role) where.role = role
+  
+  return prisma.user.findMany({
+    where,
+    select: {
+      id: true,
+      email: true,
+      fullName: true,
+      role: true,
+      status: true,
+      lastLoginAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  })
 }

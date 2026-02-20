@@ -122,12 +122,35 @@ const getQuizAnalytics = async (req: Request, res: Response) => {
   try {
     const blockId = req.params.blockId as string
     const courseId = req.query.courseId as string
-    const tenantId = req.user?.tenantId as string
     const daysBack = req.query.daysBack ? parseInt(req.query.daysBack as string) : 30
 
-    if (!blockId || !courseId || !tenantId) {
+    if (!blockId || !courseId) {
       return res.status(400).json({
-        error: 'blockId, courseId, and tenantId are required',
+        error: 'blockId and courseId are required',
+      })
+    }
+
+    // For global admins (tenantId === null), fetch the course's tenantId
+    let tenantId = req.user?.tenantId as string | null
+    
+    if (tenantId === null || tenantId === undefined) {
+      // Global admin - get the course's tenant
+      const prisma = (await import('../db/client')).default
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        select: { tenant_id: true }
+      })
+      
+      if (!course) {
+        return res.status(404).json({ error: 'Course not found' })
+      }
+      
+      tenantId = course.tenant_id
+    }
+
+    if (!tenantId) {
+      return res.status(400).json({
+        error: 'Course must be associated with a tenant',
       })
     }
 
@@ -143,12 +166,35 @@ const getQuizAnalytics = async (req: Request, res: Response) => {
 const getCourseQuizAnalytics = async (req: Request, res: Response) => {
   try {
     const courseId = req.params.courseId as string
-    const tenantId = req.user?.tenantId as string
     const daysBack = req.query.daysBack ? parseInt(req.query.daysBack as string) : 30
 
-    if (!courseId || !tenantId) {
+    if (!courseId) {
       return res.status(400).json({
-        error: 'courseId and tenantId are required',
+        error: 'courseId is required',
+      })
+    }
+
+    // For global admins (tenantId === null), fetch the course's tenantId
+    let tenantId = req.user?.tenantId as string | null
+    
+    if (tenantId === null || tenantId === undefined) {
+      // Global admin - get the course's tenant
+      const prisma = (await import('../db/client')).default
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        select: { tenant_id: true }
+      })
+      
+      if (!course) {
+        return res.status(404).json({ error: 'Course not found' })
+      }
+      
+      tenantId = course.tenant_id
+    }
+
+    if (!tenantId) {
+      return res.status(400).json({
+        error: 'Course must be associated with a tenant',
       })
     }
 
@@ -165,12 +211,35 @@ const getTopPerformers = async (req: Request, res: Response) => {
   try {
     const blockId = req.params.blockId as string
     const courseId = req.query.courseId as string
-    const tenantId = req.user?.tenantId as string
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10
 
-    if (!blockId || !courseId || !tenantId) {
+    if (!blockId || !courseId) {
       return res.status(400).json({
-        error: 'blockId, courseId, and tenantId are required',
+        error: 'blockId and courseId are required',
+      })
+    }
+
+    // For global admins (tenantId === null), fetch the course's tenantId
+    let tenantId = req.user?.tenantId as string | null
+    
+    if (tenantId === null || tenantId === undefined) {
+      // Global admin - get the course's tenant
+      const prisma = (await import('../db/client')).default
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        select: { tenant_id: true }
+      })
+      
+      if (!course) {
+        return res.status(404).json({ error: 'Course not found' })
+      }
+      
+      tenantId = course.tenant_id
+    }
+
+    if (!tenantId) {
+      return res.status(400).json({
+        error: 'Course must be associated with a tenant',
       })
     }
 

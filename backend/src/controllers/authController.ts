@@ -87,7 +87,7 @@ const acceptInvite = async (req: Request, res: Response) => {
       await emailService.sendWelcomeEmail(
         user.email,
         user.fullName || user.email,
-        user.tenantId
+        user.tenantId || undefined
       )
     } catch (emailError: any) {
       console.error('Failed to send welcome email:', emailError)

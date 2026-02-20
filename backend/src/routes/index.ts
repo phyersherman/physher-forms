@@ -3,6 +3,7 @@ import tenantController from '../controllers/tenantController'
 import authController from '../controllers/authController'
 import * as userController from '../controllers/userController'
 import emailController from '../controllers/emailController'
+import enrollmentController from '../controllers/enrollmentController'
 import requireAuth from '../middleware/authGuard'
 import { requireAuth as requireRoleAuth } from '../middleware/authGuard'
 import { authLimiter, inviteLimiter } from '../middleware/rateLimiters'
@@ -31,6 +32,16 @@ router.delete('/tenants/:tenantId/users/:userId', requireRoleAuth(['admin']), us
 router.post('/tenants/:tenantId/users/:userId/disable', requireRoleAuth(['admin']), userController.disableUser)
 router.post('/tenants/:tenantId/users/:userId/enable', requireRoleAuth(['admin']), userController.enableUser)
 router.post('/tenants/:tenantId/users/:userId/invite', requireRoleAuth(['admin']), inviteLimiter, userController.inviteUser)
+
+// global user management (admin) - platform-wide users
+router.get('/users', requireRoleAuth(['admin']), userController.listGlobalUsers)
+router.get('/users/:userId', requireRoleAuth(['admin']), userController.getGlobalUser)
+router.post('/users', requireRoleAuth(['admin']), userController.createGlobalUser)
+router.put('/users/:userId', requireRoleAuth(['admin']), userController.updateGlobalUser)
+router.delete('/users/:userId', requireRoleAuth(['admin']), userController.deleteGlobalUser)
+router.post('/users/:userId/disable', requireRoleAuth(['admin']), userController.disableGlobalUser)
+router.post('/users/:userId/enable', requireRoleAuth(['admin']), userController.enableGlobalUser)
+router.post('/users/:userId/invite', requireRoleAuth(['admin']), inviteLimiter, userController.inviteGlobalUser)
 
 // user self-service (any authenticated user)
 router.post('/users/:userId/password', requireAuth, userController.changePassword)
@@ -109,6 +120,12 @@ router.get('/analytics/quiz/:blockId/top-performers', requireRoleAuth(['admin'])
 router.get('/analytics/tenant', requireRoleAuth(['admin']), quizController.getTenantAnalytics)
 router.get('/analytics/tenant/courses', requireRoleAuth(['admin']), quizController.getTenantCourseAnalytics)
 router.get('/analytics/admin', requireRoleAuth(['admin']), quizController.getAdminDashboardAnalytics)
+
+// enrollments (Phase 9 - Feature 1)
+router.post('/enrollments', requireRoleAuth(['admin']), enrollmentController.enrollUserInCourse)
+router.get('/enrollments/me', requireAuth, enrollmentController.getMyEnrollments)
+router.get('/enrollments/:enrollmentId/progress', requireAuth, enrollmentController.getEnrollmentProgress)
+router.delete('/enrollments/:enrollmentId', requireRoleAuth(['admin']), enrollmentController.unenrollUser)
 
 // auth
 router.post('/auth/login', authLimiter, authController.login)

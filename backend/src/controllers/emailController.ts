@@ -241,12 +241,18 @@ export const getEmailLogs = async (req: Request, res: Response) => {
     const tenantId = req.query.tenantId as string | undefined
     const limit = parseInt(req.query.limit as string) || 50
 
-    // If tenantId provided, verify admin belongs to that tenant
-    if (tenantId && req.user?.tenantId !== tenantId) {
+    // Global admins (tenantId === null) can view any logs
+    // Tenant admins can only view logs for their tenant
+    const isGlobalAdmin = req.user?.tenantId === null || req.user?.tenantId === undefined
+    
+    if (!isGlobalAdmin && tenantId && req.user?.tenantId !== tenantId) {
       return res.status(403).json({ error: 'Not authorized' })
     }
 
-    const logs = await emailService.getEmailLogs(tenantId, limit)
+    // If tenant admin and no tenantId specified, default to their tenant
+    const effectiveTenantId = isGlobalAdmin ? tenantId : (tenantId || req.user?.tenantId)
+
+    const logs = await emailService.getEmailLogs(effectiveTenantId, limit)
     res.json(logs)
   } catch (error: any) {
     console.error('Get email logs error:', error)

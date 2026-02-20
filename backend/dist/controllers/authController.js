@@ -1,9 +1,43 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const authService_1 = __importDefault(require("../services/authService"));
+const emailService = __importStar(require("../services/emailService"));
 function cookieOptions(maxAgeDays) {
     return {
         httpOnly: true,
@@ -18,7 +52,8 @@ const login = async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password)
         return res.status(400).json({ error: 'email and password required' });
-    const result = await authService_1.default.authenticate(email, password);
+    // Pass tenantId from tenantResolver middleware (if available)
+    const result = await authService_1.default.authenticate(email, password, req.tenantId);
     if (!result)
         return res.status(401).json({ error: 'invalid credentials' });
     const accessToken = result.accessToken;
@@ -67,4 +102,102 @@ const refresh = async (req, res) => {
     res.cookie('refreshToken', newRefresh.token, cookieOptions(30));
     res.json({ user: { id: user.id, email: user.email, role: user.role, tenantId: user.tenantId } });
 };
-exports.default = { login, register, logout, refresh };
+/**
+ * POST /auth/accept-invite
+ * User accepts an invite and sets their password
+ */
+const acceptInvite = async (req, res) => {
+    try {
+        const { token, password } = req.body;
+        if (!token || !password) {
+            return res.status(400).json({ error: 'Token and password are required' });
+        }
+        const user = await authService_1.default.acceptInvite(token, password);
+        // Send welcome email (non-blocking)
+        try {
+            await emailService.sendWelcomeEmail(user.email, user.fullName || user.email, user.tenantId || undefined);
+        }
+        catch (emailError) {
+            console.error('Failed to send welcome email:', emailError);
+            // Don't fail the request if welcome email fails
+        }
+        res.json({
+            success: true,
+            message: 'Password set successfully. You can now login.',
+            user: { id: user.id, email: user.email }
+        });
+    }
+    catch (error) {
+        console.error('Accept invite error:', error);
+        if (error.message.includes('Invalid') || error.message.includes('expired')) {
+            return res.status(400).json({ error: error.message });
+        }
+        res.status(500).json({ error: 'Failed to accept invite' });
+    }
+};
+/**
+ * POST /auth/forgot-password
+ * Initiates password reset flow
+ * Always returns 200 to avoid email enumeration
+ */
+const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+        // Pass tenantId if available from tenantResolver
+        const result = await authService_1.default.forgotPassword(email, req.tenantId);
+        // Send reset email if user exists (result.token will be set)
+        if (result.token) {
+            try {
+                await emailService.sendResetPasswordEmail(result.userEmail, result.userEmail, // Use email as name fallback
+                result.token, req.tenantId);
+            }
+            catch (emailError) {
+                console.error('Failed to send reset email:', emailError);
+                // Don't reveal email send failure to user
+            }
+        }
+        // Always return success (don't reveal if email exists)
+        res.json({
+            success: true,
+            message: 'If an account exists with this email, a password reset link has been sent.',
+            // TEMP: Include token in non-production for testing
+            ...(process.env.NODE_ENV !== 'production' && result.token ? { resetToken: result.token } : {})
+        });
+    }
+    catch (error) {
+        console.error('Forgot password error:', error);
+        // Still return success to avoid revealing user existence
+        res.json({
+            success: true,
+            message: 'If an account exists with this email, a password reset link has been sent.'
+        });
+    }
+};
+/**
+ * POST /auth/reset-password
+ * Resets password using a valid reset token
+ */
+const resetPassword = async (req, res) => {
+    try {
+        const { token, password } = req.body;
+        if (!token || !password) {
+            return res.status(400).json({ error: 'Token and password are required' });
+        }
+        await authService_1.default.resetPassword(token, password);
+        res.json({
+            success: true,
+            message: 'Password reset successfully. You can now login with your new password.'
+        });
+    }
+    catch (error) {
+        console.error('Reset password error:', error);
+        if (error.message.includes('Invalid') || error.message.includes('expired')) {
+            return res.status(400).json({ error: error.message });
+        }
+        res.status(500).json({ error: 'Failed to reset password' });
+    }
+};
+exports.default = { login, register, logout, refresh, acceptInvite, forgotPassword, resetPassword };

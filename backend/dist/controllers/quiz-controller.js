@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -108,11 +141,29 @@ const getQuizAnalytics = async (req, res) => {
     try {
         const blockId = req.params.blockId;
         const courseId = req.query.courseId;
-        const tenantId = req.user?.tenantId;
         const daysBack = req.query.daysBack ? parseInt(req.query.daysBack) : 30;
-        if (!blockId || !courseId || !tenantId) {
+        if (!blockId || !courseId) {
             return res.status(400).json({
-                error: 'blockId, courseId, and tenantId are required',
+                error: 'blockId and courseId are required',
+            });
+        }
+        // For global admins (tenantId === null), fetch the course's tenantId
+        let tenantId = req.user?.tenantId;
+        if (tenantId === null || tenantId === undefined) {
+            // Global admin - get the course's tenant
+            const prisma = (await Promise.resolve().then(() => __importStar(require('../db/client')))).default;
+            const course = await prisma.course.findUnique({
+                where: { id: courseId },
+                select: { tenant_id: true }
+            });
+            if (!course) {
+                return res.status(404).json({ error: 'Course not found' });
+            }
+            tenantId = course.tenant_id;
+        }
+        if (!tenantId) {
+            return res.status(400).json({
+                error: 'Course must be associated with a tenant',
             });
         }
         const analytics = await quiz_analytics_service_1.default.getQuizAnalytics(blockId, tenantId, courseId, daysBack);
@@ -127,11 +178,29 @@ const getQuizAnalytics = async (req, res) => {
 const getCourseQuizAnalytics = async (req, res) => {
     try {
         const courseId = req.params.courseId;
-        const tenantId = req.user?.tenantId;
         const daysBack = req.query.daysBack ? parseInt(req.query.daysBack) : 30;
-        if (!courseId || !tenantId) {
+        if (!courseId) {
             return res.status(400).json({
-                error: 'courseId and tenantId are required',
+                error: 'courseId is required',
+            });
+        }
+        // For global admins (tenantId === null), fetch the course's tenantId
+        let tenantId = req.user?.tenantId;
+        if (tenantId === null || tenantId === undefined) {
+            // Global admin - get the course's tenant
+            const prisma = (await Promise.resolve().then(() => __importStar(require('../db/client')))).default;
+            const course = await prisma.course.findUnique({
+                where: { id: courseId },
+                select: { tenant_id: true }
+            });
+            if (!course) {
+                return res.status(404).json({ error: 'Course not found' });
+            }
+            tenantId = course.tenant_id;
+        }
+        if (!tenantId) {
+            return res.status(400).json({
+                error: 'Course must be associated with a tenant',
             });
         }
         const analytics = await quiz_analytics_service_1.default.getCourseQuizAnalytics(courseId, tenantId, daysBack);
@@ -147,11 +216,29 @@ const getTopPerformers = async (req, res) => {
     try {
         const blockId = req.params.blockId;
         const courseId = req.query.courseId;
-        const tenantId = req.user?.tenantId;
         const limit = req.query.limit ? parseInt(req.query.limit) : 10;
-        if (!blockId || !courseId || !tenantId) {
+        if (!blockId || !courseId) {
             return res.status(400).json({
-                error: 'blockId, courseId, and tenantId are required',
+                error: 'blockId and courseId are required',
+            });
+        }
+        // For global admins (tenantId === null), fetch the course's tenantId
+        let tenantId = req.user?.tenantId;
+        if (tenantId === null || tenantId === undefined) {
+            // Global admin - get the course's tenant
+            const prisma = (await Promise.resolve().then(() => __importStar(require('../db/client')))).default;
+            const course = await prisma.course.findUnique({
+                where: { id: courseId },
+                select: { tenant_id: true }
+            });
+            if (!course) {
+                return res.status(404).json({ error: 'Course not found' });
+            }
+            tenantId = course.tenant_id;
+        }
+        if (!tenantId) {
+            return res.status(400).json({
+                error: 'Course must be associated with a tenant',
             });
         }
         const performers = await quiz_analytics_service_1.default.getTopPerformers(blockId, tenantId, courseId, limit);
