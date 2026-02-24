@@ -260,6 +260,141 @@ const addModuleToCourse = async (req: Request, res: Response) => {
   res.status(201).json(m)
 }
 
+const exportCourseAsCSV = async (req: Request, res: Response) => {
+  try {
+    const json = await courseService.exportCourseAsJSON(req.params.courseId as string)
+    res.setHeader('Content-Type', 'application/json')
+    res.setHeader('Content-Disposition', `attachment; filename="${req.params.courseId}.json"`)
+    res.send(json)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to export course'
+    res.status(400).json({ error: message })
+  }
+}
+
+const importCoursesFromCSV = async (req: Request, res: Response) => {
+  try {
+    const { csvContent } = req.body
+    const tenantId = (req.params.tenantId || req.query.tenantId) as string
+    
+    if (!csvContent) {
+      return res.status(400).json({ error: 'csvContent is required' })
+    }
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' })
+    }
+
+    console.log('[IMPORT] Received content length:', csvContent.length, 'bytes')
+    console.log('[IMPORT] Tenant ID:', tenantId)
+
+    // Parse JSON
+    const { courses, errors: parseErrors } = courseService.parseImportJSON(csvContent)
+    
+    console.log('[IMPORT] Parse result - courses:', courses.length, 'errors:', parseErrors.length)
+    if (parseErrors.length > 0) {
+      console.log('[IMPORT] Parse errors:', parseErrors)
+    }
+    
+    if (parseErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        totalParsed: courses.length,
+        importedCount: 0,
+        importedIds: [],
+        errors: parseErrors
+      })
+    }
+
+    // Validate parsed courses
+    const { valid, errors: validationErrors } = courseService.validateParsedCourses(courses)
+    
+    console.log('[IMPORT] Validation result - valid:', valid, 'errors:', validationErrors.length)
+    if (validationErrors.length > 0) {
+      console.log('[IMPORT] Validation errors:', validationErrors)
+    }
+    
+    if (!valid) {
+      return res.status(400).json({
+        success: false,
+        totalParsed: courses.length,
+        importedCount: 0,
+        importedIds: [],
+        errors: validationErrors
+      })
+    }
+
+    // Import courses
+    const result = await courseService.importCoursesFromParsed(courses, tenantId)
+    
+    res.status(result.success ? 201 : 400).json({
+      success: result.success,
+      totalParsed: courses.length,
+      importedCount: result.importedIds.length,
+      importedIds: result.importedIds,
+      errors: result.errors
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to import courses'
+    res.status(500).json({
+      success: false,
+      totalParsed: 0,
+      importedCount: 0,
+      importedIds: [],
+      errors: [{ line: 0, field: 'import', message }]
+    })
+  }
+}
+
+const previewImportFromCSV = async (req: Request, res: Response) => {
+  try {
+    const { csvContent } = req.body
+    
+    if (!csvContent) {
+      return res.status(400).json({ error: 'csvContent is required' })
+    }
+
+    // Parse JSON
+    const { courses, errors: parseErrors } = courseService.parseImportJSON(csvContent)
+    
+    if (parseErrors.length > 0) {
+      return res.status(400).json({
+        valid: false,
+        parseErrors,
+        courses: 0
+      })
+    }
+
+    // Validate parsed courses
+    const { valid, errors: validationErrors } = courseService.validateParsedCourses(courses)
+    
+    res.json({
+      valid,
+      parseErrors: [],
+      validationErrors,
+      coursesToCreate: courses.length
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to preview import'
+    res.status(500).json({
+      valid: false,
+      parseErrors: [message],
+      coursesToCreate: 0
+    })
+  }
+}
+
+const downloadCSVTemplate = async (req: Request, res: Response) => {
+  try {
+    const template = courseService.generateJSONTemplate()
+    res.setHeader('Content-Type', 'application/json')
+    res.setHeader('Content-Disposition', 'attachment; filename="course-template.json"')
+    res.send(template)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to generate template'
+    res.status(500).json({ error: message })
+  }
+}
+
 export default { 
   createCourse, 
   listCourses,
@@ -282,5 +417,9 @@ export default {
   deleteBlock,
   listBlocksByModule,
   reorderBlocks,
-  addModuleToCourse
+  addModuleToCourse,
+  exportCourseAsCSV,
+  importCoursesFromCSV,
+  previewImportFromCSV,
+  downloadCSVTemplate
 }

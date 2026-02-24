@@ -16,6 +16,7 @@ import { authLimiter, inviteLimiter } from '../middleware/rateLimiters'
 import courseController from '../controllers/courseController'
 import courseTemplateController from '../controllers/courseTemplateController'
 import quizController from '../controllers/quiz-controller'
+import progressController from '../controllers/progressController'
 import { Request, Response } from 'express'
 
 const router = Router()
@@ -67,11 +68,12 @@ router.get('/courses/global', requireRoleAuth(['admin']), courseController.listG
 router.post('/courses', requireRoleAuth(['admin']), courseController.createCourse)
 router.post('/courses/assign-to-tenant', requireRoleAuth(['admin']), courseController.assignCourseToTenant)
 router.post('/courses/:courseId/copy', requireRoleAuth(['admin']), courseController.copyCourse)
+router.get('/courses/csv-template', requireRoleAuth(['admin']), courseController.downloadCSVTemplate)
 
 // tenant-specific courses (admin)
 router.post('/tenants/:tenantId/courses', requireRoleAuth(['admin']), courseController.createCourse)
 router.get('/tenants/:tenantId/courses', requireRoleAuth(['admin']), courseController.listCourses)
-router.get('/courses/:id', requireRoleAuth(['admin']), courseController.getCourse)
+router.get('/courses/:id', requireRoleAuth(['admin', 'learner']), courseController.getCourse)
 router.put('/courses/:id', requireRoleAuth(['admin']), courseController.updateCourse)
 router.delete('/courses/:id', requireRoleAuth(['admin']), courseController.deleteCourse)
 
@@ -95,22 +97,27 @@ router.delete('/template-module-blocks/:blockId', requireRoleAuth(['admin']), co
 
 // course chapters
 router.post('/courses/:courseId/chapters', requireRoleAuth(['admin']), courseController.addChapter)
-router.get('/chapters/:chapterId', requireRoleAuth(['admin']), courseController.getChapter)
+router.get('/chapters/:chapterId', requireRoleAuth(['admin', 'learner']), courseController.getChapter)
 router.put('/chapters/:chapterId', requireRoleAuth(['admin']), courseController.updateChapter)
 router.delete('/chapters/:chapterId', requireRoleAuth(['admin']), courseController.deleteChapter)
 
 // course modules (now under chapters) - backward compatibility
 router.post('/courses/:courseId/modules', requireRoleAuth(['admin']), courseController.addModuleToCourse)
-router.get('/modules/:moduleId', requireRoleAuth(['admin']), courseController.getModule)
+router.get('/modules/:moduleId', requireRoleAuth(['admin', 'learner']), courseController.getModule)
 router.put('/modules/:moduleId', requireRoleAuth(['admin']), courseController.updateModule)
 router.delete('/modules/:moduleId', requireRoleAuth(['admin']), courseController.deleteModule)
 
 // module blocks
 router.post('/modules/:moduleId/blocks', requireRoleAuth(['admin']), courseController.addBlock)
-router.get('/modules/:moduleId/blocks', requireRoleAuth(['admin']), courseController.listBlocksByModule)
+router.get('/modules/:moduleId/blocks', requireRoleAuth(['admin', 'learner']), courseController.listBlocksByModule)
 router.post('/modules/:moduleId/blocks/reorder', requireRoleAuth(['admin']), courseController.reorderBlocks)
 router.put('/blocks/:blockId', requireRoleAuth(['admin']), courseController.updateBlock)
 router.delete('/blocks/:blockId', requireRoleAuth(['admin']), courseController.deleteBlock)
+
+// course CSV import/export (Phase 1)
+router.get('/tenants/:tenantId/courses/:courseId/export', requireRoleAuth(['admin']), courseController.exportCourseAsCSV)
+router.post('/tenants/:tenantId/courses/import', requireRoleAuth(['admin']), courseController.importCoursesFromCSV)
+router.post('/tenants/:tenantId/courses/import-preview', requireRoleAuth(['admin']), courseController.previewImportFromCSV)
 
 // quiz endpoints (learner-facing)
 router.post('/quiz/submit', requireAuth, quizController.submitQuizAttempt)
@@ -126,6 +133,13 @@ router.get('/analytics/quiz/:blockId/top-performers', requireRoleAuth(['admin'])
 router.get('/analytics/tenant', requireRoleAuth(['admin']), quizController.getTenantAnalytics)
 router.get('/analytics/tenant/courses', requireRoleAuth(['admin']), quizController.getTenantCourseAnalytics)
 router.get('/analytics/admin', requireRoleAuth(['admin']), quizController.getAdminDashboardAnalytics)
+
+// progress tracking endpoints (learner-facing)
+router.post('/modules/:moduleId/complete', requireAuth, progressController.completeModule)
+router.post('/chapters/:chapterId/complete', requireAuth, progressController.completeChapter)
+router.post('/courses/:courseId/complete', requireAuth, progressController.completeCourse)
+router.get('/courses/:courseId/progress', requireAuth, progressController.getCourseProgress)
+router.get('/courses/:courseId/structure-with-progress', requireAuth, progressController.getCourseStructureWithProgress)
 
 // enrollments (Phase 9 - Feature 1)
 router.post('/enrollments', requireRoleAuth(['admin']), enrollmentController.enrollUserInCourse)

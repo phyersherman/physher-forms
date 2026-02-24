@@ -33,10 +33,62 @@ const QuizBlockDisplay: React.FC<QuizBlockDisplayProps> = ({ block }) => {
   const [quizStarted, setQuizStarted] = useState(false)
   const [isTimeUp, setIsTimeUp] = useState(false)
 
+  // Normalize questions from various import formats to standard format
+  const normalizeQuestions = (questions: any[]): QuizQuestion[] => {
+    if (!questions || !Array.isArray(questions)) return []
+    
+    return questions.map((q, idx) => {
+      // Handle different field names
+      const text = q.text || q.question || ''
+      const id = q.id || `q${idx + 1}`
+      
+      // Normalize type (multiple_choice -> multiple-choice, etc.)
+      let type: QuizQuestion['type'] = 'multiple-choice'
+      if (q.type) {
+        const normalizedType = q.type.toLowerCase().replace(/_/g, '-')
+        if (normalizedType === 'true-false' || normalizedType === 'truefalse') {
+          type = 'true-false'
+        } else if (normalizedType === 'short-answer' || normalizedType === 'shortanswer') {
+          type = 'short-answer'
+        } else {
+          type = 'multiple-choice'
+        }
+      }
+      
+      // Handle correctAnswer - could be index (number), value (string), or already set
+      let correctAnswer: string | string[] | undefined = q.correctAnswer
+      if (correctAnswer === undefined && q.correct !== undefined && q.options) {
+        // Convert index to actual answer value
+        if (typeof q.correct === 'number' && q.options[q.correct] !== undefined) {
+          correctAnswer = q.options[q.correct]
+        } else {
+          correctAnswer = String(q.correct)
+        }
+      }
+      // Also handle 'answer' field for short-answer questions
+      if (correctAnswer === undefined && q.answer !== undefined) {
+        correctAnswer = q.answer
+      }
+      
+      return {
+        id,
+        text,
+        type,
+        options: q.options,
+        correctAnswer,
+        points: q.points || 1
+      }
+    })
+  }
+
   useEffect(() => {
     if (block.config) {
       try {
         const parsed = JSON.parse(block.config)
+        // Normalize questions to standard format
+        if (parsed.questions) {
+          parsed.questions = normalizeQuestions(parsed.questions)
+        }
         setConfig(parsed)
         // Initialize timer if time limit is set
         if (parsed.timeLimitMinutes && !quizStarted) {
