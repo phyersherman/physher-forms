@@ -63,12 +63,8 @@ export async function registerViaPasswordlessLink(req: Request, res: Response) {
       ipAddress
     );
 
-    // Generate magic code for immediate login
-    const magicCodeResult = await magicCodeService.generateMagicCode(result.user.id);
-
-    // TODO: Send email with magic code
-    // For now, return it in the response (in production, only send via email)
-    console.log(`[Passwordless Auth] Magic code for ${email}: ${magicCodeResult.code}`);
+    // Generate magic code for immediate login - email will be sent automatically
+    await magicCodeService.generateMagicCode(result.user.id, result.user.tenantId || undefined);
 
     res.json({
       message: 'Registration successful! Check your email for the login code.',
@@ -78,8 +74,6 @@ export async function registerViaPasswordlessLink(req: Request, res: Response) {
         fullName: result.user.fullName,
       },
       enrolledCourses: result.courses,
-      // In production, remove this and only send via email:
-      magicCode: process.env.NODE_ENV === 'development' ? magicCodeResult.code : undefined,
     });
   } catch (error: any) {
     console.error('[Passwordless Auth] Registration error:', error);
@@ -107,18 +101,12 @@ export async function sendMagicCode(req: Request, res: Response) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    // Generate magic code
+    // Generate magic code - email will be sent automatically
     const result = await magicCodeService.generateMagicCodeByEmail(email);
-
-    // TODO: Send email with magic code via email service
-    // For now, log it (in production, never expose the code in the response)
-    console.log(`[Passwordless Auth] Magic code for ${email}: ${result.code}, expires at ${result.expiresAt.toISOString()}`);
 
     res.json({
       message: 'Login code sent to your email',
       expiresAt: result.expiresAt,
-      // In production, remove this and only send via email:
-      magicCode: process.env.NODE_ENV === 'development' ? result.code : undefined,
     });
   } catch (error: any) {
     console.error('[Passwordless Auth] Send code error:', error);
@@ -147,12 +135,20 @@ export async function verifyMagicCode(req: Request, res: Response) {
     if (!email) return res.status(400).json({ error: 'Email is required' });
     if (!code) return res.status(400).json({ error: 'Code is required' });
 
-    // Validate the magic code
-    const validation = await magicCodeService.validateMagicCode(email, code);
+    // Get tenantId from request (set by tenantResolver middleware)
+    const tenantId = req.tenantId as string | undefined;
+
+    console.log(`[Passwordless Auth] Verify code endpoint called - email: "${email}", code: "${code}", tenantId: ${tenantId || 'none'}`);
+
+    // Validate the magic code (pass tenantId for proper tenant scoping)
+    const validation = await magicCodeService.validateMagicCode(email, code, tenantId);
 
     if (!validation.isValid) {
+      console.log(`[Passwordless Auth] Validation returned false for code`);
       return res.status(400).json({ error: 'Invalid or expired code' });
     }
+
+    console.log(`[Passwordless Auth] Code validation successful for user ${validation.userId}`);
 
     // Get user details directly from Prisma
     const user = await prisma.user.findUnique({
@@ -167,15 +163,15 @@ export async function verifyMagicCode(req: Request, res: Response) {
     const accessToken = authService.createAccessToken(user);
     const refreshToken = await authService.createRefreshToken(user.id);
 
-    // Set HTTP-only cookies
-    res.cookie('accessToken', accessToken, {
+    // Set HTTP-only cookies (match standard authController cookie names)
+    res.cookie('token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie('refreshToken', refreshToken.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',

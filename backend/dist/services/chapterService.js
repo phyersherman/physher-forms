@@ -32,6 +32,18 @@ const updateChapter = async (id, data) => {
 };
 exports.updateChapter = updateChapter;
 const deleteChapter = async (id) => {
+    // Get all modules in this chapter
+    const modules = await client_1.default.module.findMany({
+        where: { chapter_id: id },
+        include: { blocks: true }
+    });
+    // Delete all blocks in all modules
+    for (const module of modules) {
+        await client_1.default.block.deleteMany({ where: { module_id: module.id } });
+    }
+    // Delete all modules
+    await client_1.default.module.deleteMany({ where: { chapter_id: id } });
+    // Finally delete the chapter
     return client_1.default.chapter.delete({ where: { id } });
 };
 exports.deleteChapter = deleteChapter;

@@ -7,6 +7,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { sendMagicCodeEmail } from './emailService';
 
 const prisma = new PrismaClient();
 
@@ -45,10 +46,11 @@ async function canRequestMagicCode(userId: string): Promise<{ allowed: boolean; 
  * Generate a magic code for a user and send email
  * 
  * @param userId - ID of user requesting the code
- * @returns The generated magic code (for email sending)
+ * @param tenantId - Optional tenant ID
+ * @returns The generated magic code
  * @throws Error if rate limit exceeded or user not found
  */
-async function generateMagicCode(userId: string): Promise<{ code: string; expiresAt: Date }> {
+async function generateMagicCode(userId: string, tenantId?: string): Promise<{ code: string; expiresAt: Date }> {
   // Check rate limiting
   const rateCheck = await canRequestMagicCode(userId);
   if (!rateCheck.allowed) {
@@ -58,7 +60,13 @@ async function generateMagicCode(userId: string): Promise<{ code: string; expire
   // Verify user exists and has passwordless auth method
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, authMethod: true, email: true },
+    select: { 
+      id: true, 
+      authMethod: true, 
+      email: true, 
+      fullName: true,
+      tenantId: true,
+    },
   });
 
   if (!user) {
@@ -105,9 +113,35 @@ async function generateMagicCode(userId: string): Promise<{ code: string; expire
     },
   });
 
-  // TODO: Send email with magic code
-  // For now, return the code so controller can handle email sending
-  console.log(`[Magic Code] Generated code ${code} for user ${userId}, expires at ${expiresAt.toISOString()}`);
+  // Get tenant name for the email
+  let organizationName = 'Our Platform';
+  const userTenantId = user.tenantId || tenantId;
+  if (userTenantId) {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: userTenantId },
+      select: { name: true },
+    });
+    if (tenant) {
+      organizationName = tenant.name;
+    }
+  }
+
+  // Send magic code email
+  try {
+    await sendMagicCodeEmail(
+      user.email,
+      user.fullName || 'User',
+      code,
+      organizationName,
+      userTenantId
+    );
+    console.log(`[Magic Code] Generated code ${code} for user ${userId}, email sent to ${user.email}`);
+  } catch (error: any) {
+    // Log email error but don't fail code generation
+    console.error(`[Magic Code] Failed to send email for code ${code}:`, error.message);
+    // Still return the code - frontend can show it if needed for testing
+    console.log(`[Magic Code] Generated code ${code} for user ${userId}, expires at ${expiresAt.toISOString()}`);
+  }
 
   return {
     code: magicCode.code,
@@ -140,7 +174,7 @@ async function generateMagicCodeByEmail(email: string, tenantId?: string): Promi
     throw new Error('This account does not use passwordless authentication');
   }
 
-  const result = await generateMagicCode(user.id);
+  const result = await generateMagicCode(user.id, tenantId);
 
   return {
     ...result,
@@ -158,20 +192,27 @@ async function generateMagicCodeByEmail(email: string, tenantId?: string): Promi
  * @throws Error if code is invalid, expired, or already used
  */
 async function validateMagicCode(email: string, code: string, tenantId?: string): Promise<{ userId: string; isValid: boolean }> {
+  const cleanEmail = email.toLowerCase().trim();
+  const cleanCode = code.trim();
+  
+  console.log(`[Magic Code Validation] Validating code for email: ${cleanEmail}, tenantId: ${tenantId || 'none'}`);
+
   // Find user by email
   const user = await prisma.user.findFirst({
     where: { 
-      email: email.toLowerCase().trim(),
+      email: cleanEmail,
       tenantId: tenantId || undefined,
     },
     select: { id: true, authMethod: true },
   });
 
   if (!user) {
+    console.log(`[Magic Code Validation] User not found for email: ${cleanEmail}`);
     throw new Error('Invalid email or code');
   }
 
   if (user.authMethod !== 'passwordless') {
+    console.log(`[Magic Code Validation] User ${user.id} has authMethod: ${user.authMethod}, not passwordless`);
     throw new Error('This account does not use passwordless authentication');
   }
 
@@ -179,24 +220,37 @@ async function validateMagicCode(email: string, code: string, tenantId?: string)
   const magicCode = await prisma.magicCode.findFirst({
     where: {
       userId: user.id,
-      code: code.trim(),
+      code: cleanCode,
     },
     orderBy: { createdAt: 'desc' },
   });
 
   if (!magicCode) {
+    console.log(`[Magic Code Validation] Code ${cleanCode} not found for user ${user.id}`);
+    console.log(`[Magic Code Validation] Looking for codes with userId=${user.id}, got codes:`, 
+      await prisma.magicCode.findMany({
+        where: { userId: user.id },
+        select: { code: true, isUsed: true, expiresAt: true },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      })
+    );
     throw new Error('Invalid code');
   }
 
   // Check if already used
   if (magicCode.isUsed) {
+    console.log(`[Magic Code Validation] Code ${cleanCode} for user ${user.id} has already been used`);
     throw new Error('This code has already been used');
   }
 
   // Check if expired
   if (new Date() > magicCode.expiresAt) {
+    console.log(`[Magic Code Validation] Code ${cleanCode} for user ${user.id} has expired (expiresAt: ${magicCode.expiresAt})`);
     throw new Error('This code has expired. Please request a new one.');
   }
+
+  console.log(`[Magic Code Validation] Code ${cleanCode} for user ${user.id} is valid, marking as used`);
 
   // Mark code as used
   await prisma.magicCode.update({

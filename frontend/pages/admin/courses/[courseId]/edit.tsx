@@ -84,7 +84,7 @@ const EditCoursePage: React.FC = () => {
   const handleSave = async (data: CourseData) => {
     setSaving(true)
     try {
-      await api.updateCourse(courseId as string, data.title, data.description)
+      await api.updateCourse(courseId as string, data.title, data.description, data.chapters)
       alert('Course saved successfully')
     } catch (err) {
       console.error('Save error:', err)

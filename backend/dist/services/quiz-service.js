@@ -97,18 +97,34 @@ const markModuleComplete = async (moduleId, userId, courseId, tenantId) => {
     });
 };
 const isModuleAccessible = async (moduleId, userId, courseId) => {
-    // Get module with prerequisites and gating info
+    // Get module with chapter info
     const module = await client_1.default.module.findUnique({
         where: { id: moduleId },
         include: {
-            chapter: true,
+            chapter: {
+                include: {
+                    course: {
+                        include: {
+                            chapters: {
+                                include: {
+                                    modules: {
+                                        include: { blocks: true },
+                                        orderBy: { order_index: 'asc' },
+                                    },
+                                },
+                                orderBy: { order_index: 'asc' },
+                            },
+                        },
+                    },
+                },
+            },
             blocks: true,
         },
     });
     if (!module) {
         return { accessible: false, reason: 'Module not found' };
     }
-    // Check prerequisite modules
+    // Check prerequisite modules (explicit prerequisites)
     if (module.prerequisite_module_ids && module.prerequisite_module_ids.length > 0) {
         for (const prereqModuleId of module.prerequisite_module_ids) {
             const completion = await client_1.default.moduleCompletion.findFirst({
@@ -126,12 +142,22 @@ const isModuleAccessible = async (moduleId, userId, courseId) => {
             }
         }
     }
-    // Check if quiz passing is required
-    if (module.requires_quiz_pass_to_continue) {
-        // Find quiz block in this module
-        const quizBlock = module.blocks.find((b) => b.type === 'quiz');
+    // Find the previous module and check if IT requires quiz pass to continue
+    const course = module.chapter.course;
+    // Build flat list of all modules in order
+    const allModules = [];
+    for (const ch of course.chapters) {
+        for (const mod of ch.modules) {
+            allModules.push(mod);
+        }
+    }
+    // Find current module index and get previous
+    const currentIndex = allModules.findIndex((m) => m.id === moduleId);
+    const previousModule = currentIndex > 0 ? allModules[currentIndex - 1] : null;
+    // Check if PREVIOUS module requires quiz pass to continue to THIS module
+    if (previousModule && previousModule.requires_quiz_pass_to_continue) {
+        const quizBlock = previousModule.blocks.find((b) => b.type === 'quiz');
         if (quizBlock) {
-            // Check if user has passed the quiz
             const passedAttempt = await client_1.default.quizAttempt.findFirst({
                 where: {
                     blockId: quizBlock.id,
@@ -145,7 +171,7 @@ const isModuleAccessible = async (moduleId, userId, courseId) => {
             if (!passedAttempt) {
                 return {
                     accessible: false,
-                    reason: 'You must pass the quiz in this module before continuing.',
+                    reason: `You must pass the quiz in "${previousModule.title}" before accessing this module.`,
                 };
             }
         }

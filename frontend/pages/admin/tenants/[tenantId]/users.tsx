@@ -17,12 +17,25 @@ interface User {
   lastLoginAt?: string
 }
 
+interface Course {
+  id: string
+  title: string
+  description?: string
+}
+
 const UsersPage: React.FC = () => {
   const { user: currentUser } = useAuth()
   const router = useRouter()
   const { tenantId } = router.query
   const [showModal, setShowModal] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [selectedCourseIds, setSelectedCourseIds] = useState<Set<string>>(new Set())
+  const [loadingCourses, setLoadingCourses] = useState(false)
+  const [assigningCourses, setAssigningCourses] = useState(false)
 
   const { data: users, loading, deleteItem, refetch } = useTableData<User>({
     fetchFn: async () => {
@@ -121,6 +134,95 @@ const UsersPage: React.FC = () => {
     setEditingUser(null)
   }
 
+  const handleSelectUser = (userId: string) => {
+    const newSelected = new Set(selectedUserIds)
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId)
+    } else {
+      newSelected.add(userId)
+    }
+    setSelectedUserIds(newSelected)
+  }
+
+  const handleSelectAllUsers = () => {
+    if (selectedUserIds.size === users.length && users.length > 0) {
+      setSelectedUserIds(new Set())
+    } else {
+      setSelectedUserIds(new Set(users.map(u => u.id)))
+    }
+  }
+
+  const handleAssignCoursesToUsers = async () => {
+    if (selectedCourseIds.size === 0) {
+      alert('Please select at least one course')
+      return
+    }
+
+    setAssigningCourses(true)
+    try {
+      if (!tenantId || typeof tenantId !== 'string') return
+      
+      await api.bulkAssignCourses({
+        userIds: Array.from(selectedUserIds),
+        courseIds: Array.from(selectedCourseIds),
+        tenantId,
+      })
+      alert(`Successfully assigned ${selectedCourseIds.size} course(s) to ${selectedUserIds.size} user(s)`)
+      setSelectedUserIds(new Set())
+      setSelectedCourseIds(new Set())
+      setShowAssignModal(false)
+      refetch()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to assign courses')
+    } finally {
+      setAssigningCourses(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    setShowDeleteConfirm(false)
+    const userIds = Array.from(selectedUserIds)
+    let deleted = 0
+    let failed = 0
+
+    for (const userId of userIds) {
+      if (currentUser?.id === userId) {
+        alert('Cannot delete your own account')
+        failed++
+        continue
+      }
+
+      try {
+        await deleteItem(userId)
+        deleted++
+      } catch (err) {
+        console.error('Failed to delete user:', err)
+        failed++
+      }
+    }
+
+    setSelectedUserIds(new Set())
+    alert(`Deleted ${deleted} user(s). ${failed > 0 ? `Failed to delete ${failed}.` : ''}`)
+  }
+
+  const handleOpenAssignModal = async () => {
+    setShowAssignModal(true)
+    setLoadingCourses(true)
+    try {
+      if (!tenantId || typeof tenantId !== 'string') return
+      const courseList = await api.getTenantCourses(tenantId)
+      setCourses(Array.isArray(courseList) ? courseList : [])
+    } catch (err) {
+      alert('Failed to load courses')
+    } finally {
+      setLoadingCourses(false)
+    }
+  }
+
+  const handleCloseSaveUser = () => {
+    handleCloseModal()
+  }
+
   const handleSaveUser = async (data: {
     email: string
     fullName?: string
@@ -201,7 +303,28 @@ const UsersPage: React.FC = () => {
     )
   }
 
-  const columns: TableColumn<User>[] = [
+  const columns: (TableColumn<User> & { header?: React.ReactNode })[] = [
+    {
+      key: 'checkbox',
+      header: (
+        <input
+          type="checkbox"
+          checked={selectedUserIds.size === users.length && users.length > 0}
+          onChange={handleSelectAllUsers}
+          style={{ cursor: 'pointer' }}
+          title="Select all users"
+        />
+      ) as any,
+      render: (_, user) => (
+        <input
+          type="checkbox"
+          checked={selectedUserIds.has(user.id)}
+          onChange={() => handleSelectUser(user.id)}
+          style={{ cursor: 'pointer' }}
+        />
+      ),
+      width: '40px',
+    },
     {
       key: 'email',
       header: 'Email',
@@ -243,8 +366,67 @@ const UsersPage: React.FC = () => {
         </button>
       </div>
 
+      {selectedUserIds.size > 0 && (
+        <div style={{
+          marginBottom: '16px',
+          padding: '16px',
+          backgroundColor: '#e3f2fd',
+          borderRadius: '6px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <span style={{ fontWeight: 600 }}>
+            {selectedUserIds.size} user(s) selected
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={handleOpenAssignModal}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#1976d2',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              🎓 Assign Course
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#d32f2f',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              🗑️ Delete
+            </button>
+            <button
+              onClick={() => setSelectedUserIds(new Set())}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#999',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       <AdminTable
-        columns={columns}
+        columns={columns as TableColumn<User>[]}
         data={users}
         loading={loading}
         emptyStateText="No users yet. Create your first user to get started."
@@ -332,6 +514,174 @@ const UsersPage: React.FC = () => {
           onClose={handleCloseModal}
           onSave={handleSaveUser}
         />
+      )}
+
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '32px',
+            borderRadius: '8px',
+            maxWidth: '500px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
+          }}>
+            <h2 style={{ marginTop: 0 }}>Delete Users?</h2>
+            <p style={{ color: '#666', marginBottom: '24px' }}>
+              Are you sure you want to delete {selectedUserIds.size} user(s)? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#f5f5f5',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#d32f2f',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Delete {selectedUserIds.size} User(s)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAssignModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '32px',
+            borderRadius: '8px',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
+          }}>
+            <h2 style={{ marginTop: 0 }}>Assign Courses to Users</h2>
+            <p style={{ color: '#666' }}>
+              Assigning {selectedCourseIds.size} course(s) to {selectedUserIds.size} user(s)
+            </p>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '12px', fontWeight: 600 }}>
+                Select Courses:
+              </label>
+              {loadingCourses ? (
+                <div>Loading courses...</div>
+              ) : courses.length === 0 ? (
+                <div style={{ color: '#999' }}>No courses available</div>
+              ) : (
+                <div style={{
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  maxHeight: '300px',
+                  overflow: 'auto',
+                  padding: '12px',
+                }}>
+                  {courses.map(course => (
+                    <div key={course.id} style={{ marginBottom: '12px', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type="checkbox"
+                        id={`course-${course.id}`}
+                        checked={selectedCourseIds.has(course.id)}
+                        onChange={(e) => {
+                          const newCourses = new Set(selectedCourseIds)
+                          if (e.target.checked) {
+                            newCourses.add(course.id)
+                          } else {
+                            newCourses.delete(course.id)
+                          }
+                          setSelectedCourseIds(newCourses)
+                        }}
+                        style={{ marginRight: '12px', cursor: 'pointer' }}
+                      />
+                      <label htmlFor={`course-${course.id}`} style={{ cursor: 'pointer', flex: 1 }}>
+                        <strong>{course.title}</strong>
+                        {course.description && (
+                          <p style={{ margin: '4px 0 0 0', color: '#999', fontSize: '14px' }}>
+                            {course.description}
+                          </p>
+                        )}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowAssignModal(false)
+                  setSelectedCourseIds(new Set())
+                }}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#f5f5f5',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssignCoursesToUsers}
+                disabled={selectedCourseIds.size === 0 || assigningCourses}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: selectedCourseIds.size === 0 || assigningCourses ? '#ccc' : '#1976d2',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: selectedCourseIds.size === 0 || assigningCourses ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                {assigningCourses ? 'Assigning...' : `Assign ${selectedCourseIds.size} Course(s)`}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </AdminLayout>
   )

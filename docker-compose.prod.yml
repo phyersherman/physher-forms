@@ -1,0 +1,149 @@
+version: '3.8'
+
+services:
+  # Traefik reverse proxy with automatic SSL
+  traefik:
+    image: traefik:v2.10
+    container_name: lms-traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certificates:/letsencrypt
+    labels:
+      - "traefik.enable=true"
+      # Traefik dashboard (optional, secure with auth)
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${BASE_DOMAIN}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=traefik-auth"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_AUTH}"
+    networks:
+      - lms-network
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    container_name: lms-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lms_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-lms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lms}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lms-network
+
+  # Backend API
+  backend:
+    image: ghcr.io/${GITHUB_ORG}/${GITHUB_REPO}/backend:${IMAGE_TAG:-latest}
+    container_name: lms-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lms}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-lms_prod}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
+      CSRF_SECRET: ${CSRF_SECRET}
+      PORT: 4000
+      FRONTEND_URL: https://${BASE_DOMAIN}
+      # Mailgun configuration
+      MAILGUN_API_KEY: ${MAILGUN_API_KEY}
+      MAILGUN_DOMAIN: ${MAILGUN_DOMAIN}
+      MAILGUN_FROM_EMAIL: ${MAILGUN_FROM_EMAIL:-noreply@${MAILGUN_DOMAIN}}
+    volumes:
+      - backend-certificates:/app/certificates
+      - backend-fonts:/app/fonts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`${BASE_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.backend.loadbalancer.server.port=4000"
+      # Wildcard SSL for all subdomains
+      - "traefik.http.routers.backend-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${BASE_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend-wildcard.entrypoints=websecure"
+      - "traefik.http.routers.backend-wildcard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-wildcard.tls.domains[0].main=${BASE_DOMAIN}"
+      - "traefik.http.routers.backend-wildcard.tls.domains[0].sans=*.${BASE_DOMAIN}"
+    networks:
+      - lms-network
+
+  # Frontend Next.js app
+  frontend:
+    image: ghcr.io/${GITHUB_ORG}/${GITHUB_REPO}/frontend:${IMAGE_TAG:-latest}
+    container_name: lms-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: https://${BASE_DOMAIN}/api
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      # Main domain
+      - "traefik.http.routers.frontend.rule=Host(`${BASE_DOMAIN}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+      # Wildcard for all tenant subdomains
+      - "traefik.http.routers.frontend-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${BASE_DOMAIN}`)"
+      - "traefik.http.routers.frontend-wildcard.entrypoints=websecure"
+      - "traefik.http.routers.frontend-wildcard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.frontend-wildcard.tls.domains[0].main=${BASE_DOMAIN}"
+      - "traefik.http.routers.frontend-wildcard.tls.domains[0].sans=*.${BASE_DOMAIN}"
+      # HTTP to HTTPS redirect
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+    networks:
+      - lms-network
+
+volumes:
+  postgres-data:
+    driver: local
+  traefik-certificates:
+    driver: local
+  backend-certificates:
+    driver: local
+  backend-fonts:
+    driver: local
+
+networks:
+  lms-network:
+    driver: bridge

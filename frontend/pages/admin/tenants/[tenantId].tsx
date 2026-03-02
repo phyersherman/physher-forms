@@ -11,6 +11,7 @@ interface Tenant {
   name: string
   domains: any[]
   defaultLocale: string
+  certificateSignature?: string | null
 }
 
 interface Course {
@@ -52,6 +53,7 @@ const TenantDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
   const [tenantName, setTenantName] = useState('')
+  const [certificateSignature, setCertificateSignature] = useState('')
   const [showCopyModal, setShowCopyModal] = useState(false)
   const [allTenants, setAllTenants] = useState<Tenant[]>([])
   const [selectedCourseForCopy, setSelectedCourseForCopy] = useState<Course | null>(null)
@@ -75,6 +77,7 @@ const TenantDetailPage: React.FC = () => {
         ])
         setTenant(tenantData)
         setTenantName(tenantData.name)
+        setCertificateSignature(tenantData.certificateSignature || '')
         setCourses(Array.isArray(coursesData) ? coursesData : [])
         setAllTenants(Array.isArray(tenantsData) ? tenantsData : [])
         setCourseAnalytics(Array.isArray(analyticsData) ? analyticsData : [])
@@ -92,8 +95,8 @@ const TenantDetailPage: React.FC = () => {
   const handleUpdateTenant = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await api.updateTenant(tenantId as string, { name: tenantName })
-      setTenant({ ...tenant!, name: tenantName })
+      await api.updateTenant(tenantId as string, { name: tenantName, certificateSignature: certificateSignature || null })
+      setTenant({ ...tenant!, name: tenantName, certificateSignature })
       setEditMode(false)
       alert('Tenant updated successfully')
     } catch (err) {
@@ -166,49 +169,194 @@ const TenantDetailPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Quick Actions */}
-          <div style={{ display: 'flex', gap: '12px', paddingTop: 16, borderTop: '1px solid #e2e8f0' }}>
+          {/* Navigation Tabs */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '4px', 
+            paddingTop: 16, 
+            borderTop: '1px solid #e2e8f0',
+            overflowX: 'auto',
+            flexWrap: 'wrap'
+          }}>
             <Link
               href={`/admin/tenants/${tenantId}/users`}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px',
-                padding: '10px 16px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
+                gap: '6px',
+                padding: '8px 12px',
+                background: router.pathname.includes('/users') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#f1f5f9',
+                color: router.pathname.includes('/users') ? 'white' : '#334155',
                 textDecoration: 'none',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: 600,
-                transition: 'transform 0.2s',
+                transition: 'all 0.2s',
+                border: router.pathname.includes('/users') ? 'none' : '1px solid #e2e8f0',
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
             >
               <span>👥</span>
-              <span>Manage Users</span>
+              <span>Users</span>
+            </Link>
+            <Link
+              href={`/admin/tenants/${tenantId}/enrollments`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                background: router.pathname.includes('/enrollments') ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#f1f5f9',
+                color: router.pathname.includes('/enrollments') ? 'white' : '#334155',
+                textDecoration: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+                border: router.pathname.includes('/enrollments') ? 'none' : '1px solid #e2e8f0',
+              }}
+            >
+              <span>📚</span>
+              <span>Enrollments</span>
+            </Link>
+            <Link
+              href={`/admin/tenants/${tenantId}/certificates`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                background: router.pathname.includes('/certificates') ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : '#f1f5f9',
+                color: router.pathname.includes('/certificates') ? 'white' : '#334155',
+                textDecoration: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+                border: router.pathname.includes('/certificates') ? 'none' : '1px solid #e2e8f0',
+              }}
+            >
+              <span>🎓</span>
+              <span>Certificates</span>
+            </Link>
+            <Link
+              href={`/admin/tenants/${tenantId}/registration-links`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                background: router.pathname.includes('/registration-links') ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : '#f1f5f9',
+                color: router.pathname.includes('/registration-links') ? 'white' : '#334155',
+                textDecoration: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+                border: router.pathname.includes('/registration-links') ? 'none' : '1px solid #e2e8f0',
+              }}
+            >
+              <span>🔗</span>
+              <span>Registration Links</span>
+            </Link>
+            <Link
+              href={`/admin/tenants/${tenantId}/passwordless-links`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                background: router.pathname.includes('/passwordless-links') ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' : '#f1f5f9',
+                color: router.pathname.includes('/passwordless-links') ? 'white' : '#334155',
+                textDecoration: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+                border: router.pathname.includes('/passwordless-links') ? 'none' : '1px solid #e2e8f0',
+              }}
+            >
+              <span>🔑</span>
+              <span>Passwordless Links</span>
+            </Link>
+            <Link
+              href={`/admin/tenants/${tenantId}/bulk-operations`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                background: router.pathname.includes('/bulk-operations') ? 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)' : '#f1f5f9',
+                color: router.pathname.includes('/bulk-operations') ? 'white' : '#334155',
+                textDecoration: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+                border: router.pathname.includes('/bulk-operations') ? 'none' : '1px solid #e2e8f0',
+              }}
+            >
+              <span>📤</span>
+              <span>Bulk Operations</span>
+            </Link>
+            <Link
+              href={`/admin/tenants/${tenantId}/course-import-export`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                background: router.pathname.includes('/course-import-export') ? 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' : '#f1f5f9',
+                color: router.pathname.includes('/course-import-export') ? 'white' : '#334155',
+                textDecoration: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+                border: router.pathname.includes('/course-import-export') ? 'none' : '1px solid #e2e8f0',
+              }}
+            >
+              <span>📥📤</span>
+              <span>Import/Export</span>
             </Link>
             <Link
               href={`/admin/tenants/${tenantId}/email-config`}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px',
-                padding: '10px 16px',
-                background: '#64748b',
-                color: 'white',
+                gap: '6px',
+                padding: '8px 12px',
+                background: router.pathname.includes('/email-config') ? 'linear-gradient(135deg, #64748b 0%, #475569 100%)' : '#f1f5f9',
+                color: router.pathname.includes('/email-config') ? 'white' : '#334155',
                 textDecoration: 'none',
                 borderRadius: '6px',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: 600,
-                transition: 'transform 0.2s',
+                transition: 'all 0.2s',
+                border: router.pathname.includes('/email-config') ? 'none' : '1px solid #e2e8f0',
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
             >
               <span>📧</span>
               <span>Email Config</span>
+            </Link>
+            <Link
+              href={`/admin/tenants/${tenantId}/analytics`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                background: router.pathname.includes('/analytics') ? 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' : '#f1f5f9',
+                color: router.pathname.includes('/analytics') ? 'white' : '#334155',
+                textDecoration: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+                border: router.pathname.includes('/analytics') ? 'none' : '1px solid #e2e8f0',
+              }}
+            >
+              <span>📊</span>
+              <span>Analytics</span>
             </Link>
           </div>
 
@@ -222,6 +370,16 @@ const TenantDetailPage: React.FC = () => {
                   required
                   style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
                 />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 14 }}>Certificate Signature Name</label>
+                <input
+                  value={certificateSignature}
+                  onChange={e => setCertificateSignature(e.target.value)}
+                  placeholder="e.g., John Smith, Director of Training"
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                />
+                <p style={{ fontSize: 12, color: '#666', marginTop: 4 }}>This name will appear above the signature line on generated certificates</p>
               </div>
               <button type="submit" style={{ padding: '8px 16px', background: '#0070f3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: 14, fontWeight: 500 }}>
                 Save Changes

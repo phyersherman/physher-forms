@@ -131,7 +131,7 @@ const ForgotPasswordPage: React.FC = () => {
           Enter your email address and we'll send you a link to reset your password
         </p>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div style={{ marginBottom: '24px' }}>
             <label
               htmlFor="email"

@@ -231,10 +231,16 @@ async function validatePasswordlessToken(token: string) {
     throw new Error('This link has reached its maximum usage limit');
   }
 
-  // Fetch tenant details
+  // Fetch tenant details with branding
   const tenant = await prisma.tenant.findUnique({
     where: { id: link.tenantId },
-    select: { id: true, name: true },
+    select: { 
+      id: true, 
+      name: true,
+      logoUrl: true,
+      primaryColor: true,
+      secondaryColor: true,
+    },
   });
 
   // Fetch course details

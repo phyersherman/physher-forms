@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Verification Code</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #ffffff;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .content p {
+      margin: 0 0 20px 0;
+      font-size: 16px;
+      color: #555;
+    }
+    .code-container {
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .code {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: 8px;
+      color: #667eea;
+      font-family: 'Courier New', monospace;
+      display: inline-block;
+      margin: 10px 0;
+    }
+    .code-label {
+      font-size: 14px;
+      color: #6c757d;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .expiry-notice {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px 20px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .expiry-notice p {
+      margin: 0;
+      font-size: 14px;
+      color: #856404;
+    }
+    .footer {
+      background: #f8f9fa;
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid #e9ecef;
+    }
+    .footer p {
+      margin: 5px 0;
+      font-size: 14px;
+      color: #6c757d;
+    }
+    .security-notice {
+      background: #e7f3ff;
+      border-left: 4px solid #2196f3;
+      padding: 15px 20px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .security-notice p {
+      margin: 0;
+      font-size: 14px;
+      color: #0c5460;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✉️ Verify Your Email</h1>
+    </div>
+    <div class="content">
+      <p>Hi {{recipientName}},</p>
+      
+      <p>Welcome to {{organizationName}}! To complete your registration and access your courses, please enter the verification code below:</p>
+      
+      <div class="code-container">
+        <div class="code-label">Your Verification Code</div>
+        <div class="code">{{magicCode}}</div>
+      </div>
+      
+      <div class="expiry-notice">
+        <p><strong>⏱️ This code expires in 10 minutes.</strong> If you don't use it in time, you'll need to request a new one.</p>
+      </div>
+      
+      <p>Enter this code on the registration page to verify your email and gain access to your enrolled courses.</p>
+      
+      <div class="security-notice">
+        <p><strong>🔒 Security tip:</strong> Never share this code with anyone. Our team will never ask you for this code via email or phone.</p>
+      </div>
+      
+      <p style="font-size: 14px; color: #6c757d; margin-top: 30px;">
+        If you didn't request this code, please ignore this email. Your account security is not at risk.
+      </p>
+    </div>
+    <div class="footer">
+      <p>Sent with ❤️ by {{organizationName}}</p>
+      <p style="margin-top: 15px;">
+        This is an automated message, please do not reply to this email.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

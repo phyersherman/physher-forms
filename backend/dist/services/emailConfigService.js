@@ -8,8 +8,34 @@ const client_1 = __importDefault(require("../db/client"));
 const crypto_1 = require("../utils/crypto");
 const validators_1 = require("../utils/validators");
 /**
+ * Build a config object from environment variables
+ * Used as fallback if no database config exists
+ */
+const buildEnvEmailConfig = () => {
+    if (!process.env.MAILGUN_API_KEY ||
+        !process.env.MAILGUN_DOMAIN ||
+        !process.env.EMAIL_FROM_ADDRESS ||
+        !process.env.EMAIL_FROM_NAME) {
+        return null;
+    }
+    return {
+        id: 'env-fallback',
+        tenantId: null,
+        provider: 'mailgun',
+        apiKey: process.env.MAILGUN_API_KEY,
+        domain: process.env.MAILGUN_DOMAIN,
+        fromEmail: process.env.EMAIL_FROM_ADDRESS,
+        fromName: process.env.EMAIL_FROM_NAME,
+        replyToEmail: process.env.EMAIL_REPLY_TO || null,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+    };
+};
+/**
  * Get email configuration for a tenant
  * Falls back to global config if tenant config doesn't exist or is inactive
+ * Falls back to environment variables as last resort
  */
 const getEmailConfig = async (tenantId) => {
     let config = null;
@@ -25,15 +51,24 @@ const getEmailConfig = async (tenantId) => {
             where: { tenantId: null, isActive: true },
         });
     }
+    // Fall back to environment variables if no database config found
     if (!config) {
-        throw new Error('No active email configuration found');
+        config = buildEnvEmailConfig();
     }
-    // Decrypt API key before returning
-    const decryptedApiKey = (0, crypto_1.decrypt)(config.apiKey);
-    return {
-        ...config,
-        apiKey: decryptedApiKey,
-    };
+    if (!config) {
+        throw new Error('No active email configuration found. ' +
+            'Please configure email settings via the admin panel or set environment variables: ' +
+            'MAILGUN_API_KEY, MAILGUN_DOMAIN, EMAIL_FROM_ADDRESS, EMAIL_FROM_NAME');
+    }
+    // Decrypt API key before returning (if it's from database)
+    if (config.id !== 'env-fallback') {
+        const decryptedApiKey = (0, crypto_1.decrypt)(config.apiKey);
+        return {
+            ...config,
+            apiKey: decryptedApiKey,
+        };
+    }
+    return config;
 };
 exports.getEmailConfig = getEmailConfig;
 /**

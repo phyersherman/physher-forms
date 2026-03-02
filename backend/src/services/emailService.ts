@@ -240,6 +240,29 @@ export const sendWelcomeEmail = async (
 }
 
 /**
+ * Send magic code email for passwordless authentication
+ */
+export const sendMagicCodeEmail = async (
+  recipientEmail: string,
+  recipientName: string,
+  magicCode: string,
+  organizationName: string,
+  tenantId?: string
+) => {
+  return sendEmail({
+    to: recipientEmail,
+    subject: 'Your Verification Code',
+    templateName: 'magic-code',
+    variables: {
+      recipientName,
+      magicCode,
+      organizationName,
+    },
+    tenantId,
+  })
+}
+
+/**
  * Get email logs for a tenant
  */
 export const getEmailLogs = async (tenantId?: string, limit = 50) => {
@@ -258,5 +281,6 @@ export default {
   sendInviteEmail,
   sendResetPasswordEmail,
   sendWelcomeEmail,
+  sendMagicCodeEmail,
   getEmailLogs,
 }

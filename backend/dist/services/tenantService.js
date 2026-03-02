@@ -84,7 +84,8 @@ const update = async (id, data) => {
             defaultLocale: data.defaultLocale,
             primaryColor: data.theme?.primaryColor,
             secondaryColor: data.theme?.secondaryColor,
-            logoUrl: data.theme?.logoUrl
+            logoUrl: data.theme?.logoUrl,
+            certificateSignature: data.certificateSignature
         },
         include: { domains: true }
     });

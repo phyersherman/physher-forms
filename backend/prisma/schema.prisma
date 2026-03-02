@@ -14,6 +14,7 @@ model Tenant {
   primaryColor            String?
   secondaryColor          String?
   logoUrl                 String?
+  certificateSignature    String?                  // Name to display on certificate signature line
   is_template             Boolean                  @default(false)
   createdAt               DateTime                 @default(now())
   domains                 Domain[]
@@ -35,7 +36,7 @@ model Domain {
   host      String  @unique
   isPrimary Boolean @default(false)
   tenantId  String
-  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -55,12 +56,13 @@ model User {
   lastLoginAt              DateTime?
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
-  tenant                   Tenant?                   @relation(fields: [tenantId], references: [id])
+  tenant                   Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   refreshTokens            RefreshToken[]
   enrollments              Enrollment[]
   certificates             Certificate[]
   quizAttempts             QuizAttempt[]
   moduleCompletions        ModuleCompletion[]
+  chapterCompletions       ChapterCompletion[]
   magicCodes               MagicCode[]
   bulkImports              BulkImportJob[]
   registrationLinkUsages   RegistrationLinkUsage[]
@@ -74,7 +76,7 @@ model Course {
   title            String
   description      String?
   tenant_id        String? // null = global course, set = tenant-specific course
-  tenant           Tenant?   @relation(fields: [tenant_id], references: [id])
+  tenant           Tenant?   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   global_course_id String? // reference to the global course this was copied from
   globalCourse     Course?   @relation("CourseToGlobalCourse", fields: [global_course_id], references: [id])
   copiedCourses    Course[]  @relation("CourseToGlobalCourse") // courses copied from this global course
@@ -92,7 +94,7 @@ model Chapter {
   order_index              Int      @default(0)
   modules                  Module[]
   tenant_id                String? // null = global, set = tenant-specific
-  tenant                   Tenant?  @relation(fields: [tenant_id], references: [id])
+  tenant                   Tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   // Assessment settings
   assessment_title         String?
   assessment_required      Boolean  @default(false)
@@ -148,7 +150,7 @@ model Module {
   requires_quiz_pass_to_continue Boolean  @default(false)
   // Other existing fields (content_type, etc.) can be moved to blocks
   tenant_id                      String? // null = global, set = tenant-specific
-  tenant                         Tenant?  @relation(fields: [tenant_id], references: [id])
+  tenant                         Tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   // Audit
   created_at                     DateTime @default(now())
   updated_at                     DateTime @updatedAt
@@ -163,7 +165,7 @@ model Block {
   config      String? // JSON for quiz/assignment config
   order_index Int      @default(0)
   tenant_id   String? // null = global, set = tenant-specific
-  tenant      Tenant?  @relation(fields: [tenant_id], references: [id])
+  tenant      Tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   // Audit
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
@@ -179,7 +181,7 @@ model QuizWidget {
   attempts_allowed Int      @default(1)
   feedback_options String? // JSON for feedback settings
   tenant_id        String
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+  tenant           Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
   // Relations: Blocks can reference this via config
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
@@ -229,6 +231,19 @@ model ModuleCompletion {
 
   @@index([userId])
   @@index([moduleId])
+}
+
+model ChapterCompletion {
+  id          String   @id @default(cuid())
+  chapterId   String
+  userId      String
+  tenantId    String
+  courseId    String
+  completedAt DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([chapterId])
 }
 
 // Feature 2: Certificate Generation
@@ -356,7 +371,7 @@ model RefreshToken {
   id        String   @id @default(cuid())
   token     String   @unique
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   revoked   Boolean  @default(false)
   expiresAt DateTime
   createdAt DateTime @default(now())
@@ -374,7 +389,7 @@ model EmailConfig {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model EmailLog {

@@ -135,7 +135,7 @@ const ResetPasswordPage: React.FC = () => {
           Enter your new password below
         </p>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           {error && (
             <div
               style={{

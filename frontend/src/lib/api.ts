@@ -85,11 +85,11 @@ export async function getCourse(courseId: string) {
   return fetchJson(`/courses/${courseId}`, { method: 'GET' })
 }
 
-export async function updateCourse(courseId: string, title?: string, description?: string) {
+export async function updateCourse(courseId: string, title?: string, description?: string, chapters?: any[]) {
   return fetchJson(`/courses/${courseId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, description }),
+    body: JSON.stringify({ title, description, chapters }),
   })
 }
 
@@ -112,6 +112,56 @@ export async function copyCourse(courseId: string, tenantId: string, newTitle?: 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tenant_id: tenantId, title: newTitle }),
   })
+}
+
+// Phase 1: CSV Import/Export
+export async function exportCourseAsCSV(tenantId: string, courseId: string) {
+  const res = await fetch(`${API_BASE}/tenants/${tenantId}/courses/${courseId}/export`, {
+    credentials: 'include'
+  })
+  if (!res.ok) throw new Error('Failed to export course')
+  return res.text()
+}
+
+export async function importCoursesFromCSV(tenantId: string, csvContent: string) {
+  return fetchJson(`/tenants/${tenantId}/courses/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ csvContent }),
+  })
+}
+
+export async function previewCSVImport(tenantId: string, csvContent: string) {
+  return fetchJson(`/tenants/${tenantId}/courses/import-preview`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ csvContent }),
+  })
+}
+
+export async function downloadCSVTemplate() {
+  const url = `${API_BASE}/courses/csv-template`
+  console.log('Fetching JSON template from:', url)
+  
+  const res = await fetch(url, {
+    credentials: 'include',
+    headers: { 'X-CSRF-Token': csrfToken || '' }
+  })
+  
+  console.log('JSON template response status:', res.status)
+  
+  if (!res.ok) {
+    try {
+      const error = await res.json()
+      throw new Error(error.error || `HTTP ${res.status}`)
+    } catch {
+      throw new Error(`HTTP ${res.status} - Failed to download template`)
+    }
+  }
+  
+  const json = await res.text()
+  if (!json) throw new Error('Empty response from template endpoint')
+  return json
 }
 
 export async function logout() {
@@ -357,11 +407,35 @@ export async function getModule(moduleId: string) {
 }
 
 export async function completeModule(moduleId: string, courseId: string) {
-  return fetchJson('/modules/complete', {
+  return fetchJson(`/modules/${moduleId}/complete`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ module_id: moduleId, course_id: courseId }),
+    body: JSON.stringify({ courseId }),
   })
+}
+
+export async function completeChapter(chapterId: string, courseId: string) {
+  return fetchJson(`/chapters/${chapterId}/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ courseId }),
+  })
+}
+
+export async function completeCourse(courseId: string) {
+  return fetchJson(`/courses/${courseId}/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+}
+
+export async function getCourseProgress(courseId: string) {
+  return fetchJson(`/courses/${courseId}/progress`, { method: 'GET' })
+}
+
+export async function getCourseStructureWithProgress(courseId: string) {
+  return fetchJson(`/courses/${courseId}/structure-with-progress`, { method: 'GET' })
 }
 
 export async function submitQuiz(blockId: string, answers: Record<string, any>) {
@@ -429,6 +503,18 @@ export async function generateCertificate(
   })
 }
 
+export async function generateCertificateByCourse(
+  userId: string,
+  courseId: string,
+  tenantId: string
+) {
+  return fetchJson('/certificates/generate-by-course', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, courseId, tenantId }),
+  })
+}
+
 export async function getMyCertificates() {
   return fetchJson('/certificates/me', { method: 'GET' })
 }
@@ -438,22 +524,16 @@ export async function getCertificate(certificateId: string) {
 }
 
 export async function downloadCertificate(certificateId: string) {
-  // For file downloads, we use a different approach - open in new window or trigger download
-  const token = document.cookie
-    .split('; ')
-    .find(row => row.startsWith('token='))
-    ?.split('=')[1]
-  
-  if (!token) {
-    throw new Error('Not authenticated')
-  }
-  
-  // Open download URL in current window to trigger download
+  // Open download URL directly - browser will include httpOnly cookies automatically
   window.location.href = `${API_BASE}/certificates/${certificateId}/download`
 }
 
 export async function deleteCertificate(certificateId: string) {
   return fetchJson(`/certificates/${certificateId}`, { method: 'DELETE' })
+}
+
+export async function getTenantCertificates(tenantId: string) {
+  return fetchJson(`/tenants/${tenantId}/certificates`, { method: 'GET' })
 }
 
 // ========================================
@@ -720,6 +800,11 @@ export default {
   deleteCourse,
   assignCourseToTenant,
   copyCourse,
+  // CSV Import/Export (Phase 1)
+  exportCourseAsCSV,
+  importCoursesFromCSV,
+  previewCSVImport,
+  downloadCSVTemplate,
   // Tenant management
   getTenants,
   getTenant,
@@ -758,6 +843,10 @@ export default {
   getModuleAccess,
   getModule,
   completeModule,
+  completeChapter,
+  completeCourse,
+  getCourseProgress,
+  getCourseStructureWithProgress,
   submitQuiz,
   getQuizAttempts,
   getLatestQuizAttempt,
@@ -771,10 +860,12 @@ export default {
   unenrollUser,
   // Certificates (Phase 9)
   generateCertificate,
+  generateCertificateByCourse,
   getMyCertificates,
   getCertificate,
   downloadCertificate,
   deleteCertificate,
+  getTenantCertificates,
   // Registration Links (Phase 9)
   createRegistrationLink,
   getRegistrationLinks,

@@ -149,10 +149,12 @@ router.delete('/enrollments/:enrollmentId', requireRoleAuth(['admin']), enrollme
 
 // certificates (Phase 9 - Feature 2)
 router.post('/certificates/generate', requireRoleAuth(['admin']), certificateController.generateCertificate)
+router.post('/certificates/generate-by-course', requireRoleAuth(['admin']), certificateController.generateCertificateByCourse)
 router.get('/certificates/me', requireAuth, certificateController.getMyCertificates)
 router.get('/certificates/:certificateId', requireAuth, certificateController.getCertificate)
 router.get('/certificates/:certificateId/download', requireAuth, certificateController.downloadCertificate)
 router.delete('/certificates/:certificateId', requireRoleAuth(['admin']), certificateController.deleteCertificate)
+router.get('/tenants/:tenantId/certificates', requireRoleAuth(['admin']), certificateController.getTenantCertificates)
 
 // registration links (Phase 9 - Feature 3)
 router.post('/tenants/:tenantId/registration-links', requireRoleAuth(['admin']), registrationLinkController.createRegistrationLink)
@@ -195,6 +197,11 @@ router.post('/public/auth/resend-code', authLimiter, passwordlessAuthController.
 
 // magic code cleanup (admin - for cron jobs)
 router.post('/admin/magic-codes/cleanup', requireRoleAuth(['admin']), passwordlessAuthController.cleanupExpiredCodes)
+
+// health check endpoint (no auth required)
+router.get('/health', (_req: Request, res: Response) => {
+	res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() })
+})
 
 // auth
 router.post('/auth/login', authLimiter, authController.login)

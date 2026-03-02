@@ -40,10 +40,12 @@ app.get('/api/csrf-token', csrfMiddleware, (req, res) => {
 
 // Apply CSRF protection to non-auth POST/PUT/DELETE endpoints. We skip login/register so users
 // can obtain a token and login without being blocked on first request.
+// Also skip public endpoints which should be accessible without CSRF.
 app.use((req, res, next) => {
   const isAuthPath = req.path.startsWith('/api/auth')
+  const isPublicPath = req.path.startsWith('/api/public/')
   const isSafeMethod = req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS'
-  if (isSafeMethod || isAuthPath) return next()
+  if (isSafeMethod || isAuthPath || isPublicPath) return next()
   return csrfMiddleware(req as any, res as any, next as any)
 })
 

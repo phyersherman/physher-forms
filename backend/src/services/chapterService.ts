@@ -36,5 +36,20 @@ export const updateChapter = async (
 }
 
 export const deleteChapter = async (id: string) => {
+  // Get all modules in this chapter
+  const modules = await prisma.module.findMany({
+    where: { chapter_id: id },
+    include: { blocks: true }
+  })
+
+  // Delete all blocks in all modules
+  for (const module of modules) {
+    await prisma.block.deleteMany({ where: { module_id: module.id } })
+  }
+
+  // Delete all modules
+  await prisma.module.deleteMany({ where: { chapter_id: id } })
+
+  // Finally delete the chapter
   return prisma.chapter.delete({ where: { id } })
 }

@@ -20,8 +20,8 @@ const createTenant = async (req: Request, res: Response) => {
 }
 
 const updateTenant = async (req: Request, res: Response) => {
-  const { name, defaultLocale, theme, domains } = req.body
-  const t = await tenantService.update(req.params.id as string, { name, defaultLocale, theme, domains })
+  const { name, defaultLocale, theme, domains, certificateSignature } = req.body
+  const t = await tenantService.update(req.params.id as string, { name, defaultLocale, theme, domains, certificateSignature })
   if (!t) return res.status(404).json({ error: 'not found' })
   res.json(t)
 }

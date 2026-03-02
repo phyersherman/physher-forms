@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getEmailLogs = exports.sendWelcomeEmail = exports.sendResetPasswordEmail = exports.sendInviteEmail = exports.sendBulkEmail = exports.sendEmail = void 0;
+exports.getEmailLogs = exports.sendMagicCodeEmail = exports.sendWelcomeEmail = exports.sendResetPasswordEmail = exports.sendInviteEmail = exports.sendBulkEmail = exports.sendEmail = void 0;
 const mailgun_js_1 = __importDefault(require("mailgun.js"));
 const form_data_1 = __importDefault(require("form-data"));
 const client_1 = __importDefault(require("../db/client"));
@@ -172,6 +172,23 @@ const sendWelcomeEmail = async (recipientEmail, recipientName, tenantId) => {
 };
 exports.sendWelcomeEmail = sendWelcomeEmail;
 /**
+ * Send magic code email for passwordless authentication
+ */
+const sendMagicCodeEmail = async (recipientEmail, recipientName, magicCode, organizationName, tenantId) => {
+    return (0, exports.sendEmail)({
+        to: recipientEmail,
+        subject: 'Your Verification Code',
+        templateName: 'magic-code',
+        variables: {
+            recipientName,
+            magicCode,
+            organizationName,
+        },
+        tenantId,
+    });
+};
+exports.sendMagicCodeEmail = sendMagicCodeEmail;
+/**
  * Get email logs for a tenant
  */
 const getEmailLogs = async (tenantId, limit = 50) => {
@@ -189,5 +206,6 @@ exports.default = {
     sendInviteEmail: exports.sendInviteEmail,
     sendResetPasswordEmail: exports.sendResetPasswordEmail,
     sendWelcomeEmail: exports.sendWelcomeEmail,
+    sendMagicCodeEmail: exports.sendMagicCodeEmail,
     getEmailLogs: exports.getEmailLogs,
 };

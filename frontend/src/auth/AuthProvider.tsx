@@ -2,13 +2,14 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { login as apiLogin, logout as apiLogout, me as apiMe, refreshCsrf as apiRefreshCsrf } from '../lib/api'
 
-type AuthUser = { id: string; email: string; role: string; tenantId: string }
+type AuthUser = { id: string; email: string; role: string; tenantId: string; fullName?: string }
 
 type AuthContext = {
   user: AuthUser | null | undefined
   token?: string
   login: (email: string, password: string) => Promise<void>
   logout: () => void
+  refetchUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContext | undefined>(undefined)
@@ -59,10 +60,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null)
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    // Refresh CSRF token after logout to ensure clean state for next login
+    try { await apiRefreshCsrf() } catch (e) { /* ignore */ }
     router.push('/login')
   }
 
-  return <AuthContext.Provider value={{ user, token, login, logout }}>{children}</AuthContext.Provider>
+  const refetchUser = async () => {
+    try {
+      const res = await apiMe()
+      if (res && res.user) {
+        setUser(res.user)
+        localStorage.setItem('user', JSON.stringify(res.user))
+      } else {
+        setUser(null)
+        localStorage.removeItem('user')
+      }
+    } catch (e) {
+      setUser(null)
+      localStorage.removeItem('user')
+    }
+  }
+
+  return <AuthContext.Provider value={{ user, token, login, logout, refetchUser }}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => {

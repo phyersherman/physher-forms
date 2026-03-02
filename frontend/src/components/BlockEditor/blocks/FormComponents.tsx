@@ -1,5 +1,5 @@
 import React from 'react'
-import styles from '../blocks.module.css'
+import styles from './blocks.module.css'
 
 /**
  * Reusable form components for block editors

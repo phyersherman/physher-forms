@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAuth } from '../src/auth/AuthProvider'
 import api from '../src/lib/api'
-import styles from '../styles/admin-dashboard.module.css'
+import LearnerLayout from '../src/components/LearnerLayout'
 
 interface EnrollmentWithProgress {
   id: string
@@ -61,19 +61,20 @@ const Dashboard: React.FC = () => {
     : 0
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
-      <div
-        style={{
-          marginBottom: '32px',
-          paddingBottom: '16px',
-          borderBottom: '1px solid #e0e0e0',
-        }}
-      >
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px' }}>
-          Welcome back, {user.fullName || user.email}!
-        </h1>
-        <p style={{ color: '#666' }}>Continue your learning journey</p>
-      </div>
+    <LearnerLayout title="Dashboard">
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div
+          style={{
+            marginBottom: '32px',
+            paddingBottom: '16px',
+            borderBottom: '1px solid #e0e0e0',
+          }}
+        >
+          <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '8px' }}>
+            Welcome back, {user.fullName || user.email}!
+          </h1>
+          <p style={{ color: '#666' }}>Continue your learning journey</p>
+        </div>
 
       {loading ? (
         <div style={{ padding: '24px', textAlign: 'center' }}>Loading your courses...</div>
@@ -354,7 +355,8 @@ const Dashboard: React.FC = () => {
           )}
         </>
       )}
-    </div>
+      </div>
+    </LearnerLayout>
   )
 }
 

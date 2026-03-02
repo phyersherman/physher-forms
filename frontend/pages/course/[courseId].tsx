@@ -46,6 +46,7 @@ interface Progress {
   completedChapters: string[]
   courseCompleted: boolean
   courseCompletedAt?: string
+  certificateId?: string | null
 }
 
 const CourseViewPage: React.FC = () => {
@@ -79,6 +80,7 @@ const CourseViewPage: React.FC = () => {
           completedChapters: progressData.completedChapters || [],
           courseCompleted: progressData.courseCompleted,
           courseCompletedAt: progressData.courseCompletedAt,
+          certificateId: progressData.certificateId,
         })
         setLoading(false)
 
@@ -323,6 +325,7 @@ const CourseViewPage: React.FC = () => {
                       completedChapters: progressData.completedChapters || [],
                       courseCompleted: progressData.courseCompleted,
                       courseCompletedAt: progressData.courseCompletedAt,
+                      certificateId: progressData.certificateId,
                     })
                   })
                 }
@@ -364,22 +367,55 @@ const CourseCompletionScreen: React.FC<CourseCompletionScreenProps> = ({ course,
         Completed on {completedAt}
       </p>
 
-      {/* Certificate placeholder */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: '12px',
-          padding: '32px',
-          marginBottom: '32px',
-          color: 'white',
-        }}
-      >
-        <div style={{ fontSize: '40px', marginBottom: '16px' }}>📜</div>
-        <h4 style={{ fontSize: '18px', margin: '0 0 8px 0' }}>Certificate of Completion</h4>
-        <p style={{ fontSize: '14px', opacity: 0.9, margin: 0 }}>
-          Your certificate will be available here soon
-        </p>
-      </div>
+      {/* Certificate section */}
+      {progress.certificateId ? (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '12px',
+            padding: '32px',
+            marginBottom: '32px',
+            color: 'white',
+          }}
+        >
+          <div style={{ fontSize: '40px', marginBottom: '16px' }}>📜</div>
+          <h4 style={{ fontSize: '18px', margin: '0 0 8px 0' }}>Certificate of Completion</h4>
+          <p style={{ fontSize: '14px', opacity: 0.9, margin: '0 0 20px 0' }}>
+            Your certificate is ready!
+          </p>
+          <button
+            onClick={() => api.downloadCertificate(progress.certificateId!)}
+            style={{
+              padding: '12px 24px',
+              background: 'white',
+              color: '#667eea',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '14px',
+            }}
+          >
+            📥 Download Certificate
+          </button>
+        </div>
+      ) : (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '12px',
+            padding: '32px',
+            marginBottom: '32px',
+            color: 'white',
+          }}
+        >
+          <div style={{ fontSize: '40px', marginBottom: '16px' }}>📜</div>
+          <h4 style={{ fontSize: '18px', margin: '0 0 8px 0' }}>Certificate of Completion</h4>
+          <p style={{ fontSize: '14px', opacity: 0.9, margin: 0 }}>
+            Your certificate is being generated...
+          </p>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
         <button

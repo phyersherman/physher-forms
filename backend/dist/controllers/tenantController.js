@@ -22,8 +22,8 @@ const createTenant = async (req, res) => {
     res.status(201).json(t);
 };
 const updateTenant = async (req, res) => {
-    const { name, defaultLocale, theme, domains } = req.body;
-    const t = await tenantService_1.default.update(req.params.id, { name, defaultLocale, theme, domains });
+    const { name, defaultLocale, theme, domains, certificateSignature } = req.body;
+    const t = await tenantService_1.default.update(req.params.id, { name, defaultLocale, theme, domains, certificateSignature });
     if (!t)
         return res.status(404).json({ error: 'not found' });
     res.json(t);

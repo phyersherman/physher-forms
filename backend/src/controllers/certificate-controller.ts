@@ -47,6 +47,97 @@ export async function generateCertificate(req: Request, res: Response) {
 }
 
 /**
+ * POST /api/certificates/generate-by-course
+ * Generate a certificate using userId + courseId (looks up enrollmentId automatically)
+ * Requires: admin role
+ */
+export async function generateCertificateByCourse(req: Request, res: Response) {
+  try {
+    const { userId, courseId, tenantId } = req.body
+
+    if (!userId || !courseId || !tenantId) {
+      return res.status(400).json({
+        error: 'Missing required fields: userId, courseId, tenantId'
+      })
+    }
+
+    // Authorization: global admin or tenant admin
+    const isGlobalAdmin = req.user?.tenantId === null && req.user?.role === 'admin'
+    const isTenantAdmin = req.user?.tenantId === tenantId && req.user?.role === 'admin'
+
+    if (!isGlobalAdmin && !isTenantAdmin) {
+      return res.status(403).json({ error: 'Forbidden: Admin access required' })
+    }
+
+    // Look up the enrollment
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        tenantId_courseId_userId: { tenantId, courseId, userId }
+      }
+    })
+
+    if (!enrollment) {
+      return res.status(404).json({ error: 'Enrollment not found. User must be enrolled in the course first.' })
+    }
+
+    // Mark course as completed if not already
+    if (!enrollment.completedAt) {
+      await prisma.enrollment.update({
+        where: { id: enrollment.id },
+        data: { completedAt: new Date() }
+      })
+    }
+
+    const certificate = await certificateService.generateCertificate({
+      enrollmentId: enrollment.id,
+      userId,
+      courseId,
+      tenantId
+    })
+
+    res.json(certificate)
+  } catch (error) {
+    console.error('Error generating certificate:', error)
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Failed to generate certificate'
+    })
+  }
+}
+
+/**
+ * GET /api/tenants/:tenantId/certificates
+ * Get all certificates for a tenant (admin only)
+ * Requires: admin role
+ */
+export async function getTenantCertificates(req: Request, res: Response) {
+  try {
+    const tenantId = Array.isArray(req.params.tenantId)
+      ? req.params.tenantId[0]
+      : req.params.tenantId
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Tenant ID required' })
+    }
+
+    // Authorization: global admin or tenant admin
+    const isGlobalAdmin = req.user?.tenantId === null && req.user?.role === 'admin'
+    const isTenantAdmin = req.user?.tenantId === tenantId && req.user?.role === 'admin'
+
+    if (!isGlobalAdmin && !isTenantAdmin) {
+      return res.status(403).json({ error: 'Forbidden: Admin access required' })
+    }
+
+    const certificates = await certificateService.getCertificatesForTenant(tenantId)
+    res.json(certificates)
+  } catch (error) {
+    console.error('Error fetching tenant certificates:', error)
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Failed to fetch certificates'
+    })
+  }
+}
+
+/**
  * GET /api/certificates/:certificateId
  * Get certificate details by ID
  * Requires: authentication (user can view their own certificates, admins can view all)
@@ -217,6 +308,8 @@ export async function deleteCertificate(req: Request, res: Response) {
 
 export default {
   generateCertificate,
+  generateCertificateByCourse,
+  getTenantCertificates,
   getCertificate,
   getMyCertificates,
   downloadCertificate,

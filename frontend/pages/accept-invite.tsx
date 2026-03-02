@@ -62,46 +62,60 @@ const AcceptInvitePage: React.FC = () => {
     return (
       <div
         style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           minHeight: '100vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#f5f5f5',
-          padding: '20px',
+          padding: '16px',
         }}
       >
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+          }
+          .pulse-animation {
+            animation: pulse 2s infinite;
+          }
+        `}</style>
         <div
           style={{
             maxWidth: '450px',
             width: '100%',
             backgroundColor: 'white',
-            padding: '40px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            padding: '48px 32px',
+            borderRadius: '12px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
             textAlign: 'center',
           }}
         >
           <div
+            className="pulse-animation"
             style={{
-              width: '64px',
-              height: '64px',
+              width: '72px',
+              height: '72px',
               borderRadius: '50%',
-              backgroundColor: '#4caf50',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 24px',
-              fontSize: '32px',
+              margin: '0 auto 28px',
+              fontSize: '36px',
+              color: 'white',
             }}
           >
             ✓
           </div>
-          <h1 style={{ marginTop: 0, marginBottom: '16px', fontSize: '24px', color: '#333' }}>
-            Password Set Successfully!
+          <h1 style={{ marginTop: 0, marginBottom: '12px', fontSize: '28px', color: '#333', fontWeight: 700 }}>
+            All Set!
           </h1>
-          <p style={{ color: '#666', marginBottom: '24px' }}>
-            Your account is now active. Redirecting you to login...
+          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.6', fontSize: '16px' }}>
+            Your password has been set successfully. Redirecting you to login...
           </p>
+          <div style={{ fontSize: '12px', color: '#999' }}>
+            If you're not redirected, <Link href="/login" style={{ color: '#667eea', textDecoration: 'none', fontWeight: 600 }}>click here</Link>.
+          </div>
         </div>
       </div>
     )
@@ -110,12 +124,12 @@ const AcceptInvitePage: React.FC = () => {
   return (
     <div
       style={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#f5f5f5',
-        padding: '20px',
+        padding: '16px',
       }}
     >
       <div
@@ -123,29 +137,29 @@ const AcceptInvitePage: React.FC = () => {
           maxWidth: '450px',
           width: '100%',
           backgroundColor: 'white',
-          padding: '40px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          padding: '48px 32px',
+          borderRadius: '12px',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
         }}
       >
-        <h1 style={{ marginTop: 0, marginBottom: '8px', fontSize: '24px', color: '#333' }}>
-          Accept Invitation
+        <h1 style={{ marginTop: 0, marginBottom: '8px', fontSize: '28px', color: '#333', fontWeight: 700 }}>
+          Welcome!
         </h1>
-        <p style={{ color: '#666', marginBottom: '32px' }}>
+        <p style={{ color: '#666', marginBottom: '32px', fontSize: '15px', lineHeight: '1.5' }}>
           Set your password to activate your account
         </p>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           {error && (
             <div
               style={{
-                backgroundColor: '#ffebee',
-                border: '1px solid #ef5350',
-                borderRadius: '4px',
-                padding: '12px',
+                backgroundColor: '#fee',
+                borderRadius: '8px',
+                padding: '12px 16px',
                 marginBottom: '24px',
-                color: '#c62828',
+                color: '#c33',
                 fontSize: '14px',
+                lineHeight: '1.5',
               }}
             >
               {error}
@@ -153,66 +167,47 @@ const AcceptInvitePage: React.FC = () => {
           )}
 
           <div style={{ marginBottom: '20px' }}>
-            <label
-              htmlFor="password"
-              style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontWeight: 500,
-                color: '#333',
-              }}
-            >
-              Password
-            </label>
             <input
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onFocus={(e) => (e.currentTarget.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = '#ddd')}
               required
               style={{
                 width: '100%',
-                padding: '12px',
+                padding: '12px 16px',
                 border: '1px solid #ddd',
-                borderRadius: '4px',
+                borderRadius: '8px',
                 fontSize: '14px',
                 boxSizing: 'border-box',
+                transition: 'border-color 0.3s',
               }}
-              placeholder="Enter your password"
+              placeholder="Password (min 8 characters)"
               disabled={loading}
             />
-            <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-              Must be at least 8 characters
-            </small>
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <label
-              htmlFor="confirmPassword"
-              style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontWeight: 500,
-                color: '#333',
-              }}
-            >
-              Confirm Password
-            </label>
             <input
               type="password"
               id="confirmPassword"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              onFocus={(e) => (e.currentTarget.style.borderColor = '#667eea')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = '#ddd')}
               required
               style={{
                 width: '100%',
-                padding: '12px',
+                padding: '12px 16px',
                 border: '1px solid #ddd',
-                borderRadius: '4px',
+                borderRadius: '8px',
                 fontSize: '14px',
                 boxSizing: 'border-box',
+                transition: 'border-color 0.3s',
               }}
-              placeholder="Confirm your password"
+              placeholder="Confirm password"
               disabled={loading}
             />
           </div>
@@ -220,27 +215,29 @@ const AcceptInvitePage: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
+            onMouseEnter={(e) => !loading && ((e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)')}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)')}
             style={{
               width: '100%',
-              padding: '12px',
-              backgroundColor: loading ? '#ccc' : '#1976d2',
+              padding: '12px 16px',
+              background: loading ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white',
               border: 'none',
-              borderRadius: '4px',
+              borderRadius: '8px',
               fontSize: '16px',
               fontWeight: 600,
               cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'background-color 0.2s',
+              transition: 'transform 0.2s',
             }}
           >
-            {loading ? 'Setting Password...' : 'Set Password'}
+            {loading ? 'Setting Password...' : 'Create Account'}
           </button>
         </form>
 
         <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px' }}>
           <span style={{ color: '#666' }}>Already have an account? </span>
-          <Link href="/login" style={{ color: '#1976d2', textDecoration: 'none', fontWeight: 500 }}>
-            Login
+          <Link href="/login" style={{ color: '#667eea', textDecoration: 'none', fontWeight: 600 }}>
+            Sign In
           </Link>
         </div>
       </div>
