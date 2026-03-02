@@ -64,4 +64,4 @@ jobs:
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}:buildcache,mode=max
 
       - name: Image digest
-        run: echo ${{ steps.meta.outputs.tags }}
+        run: echo "${{ steps.meta.outputs.tags }}"
