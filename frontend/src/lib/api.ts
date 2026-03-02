@@ -209,7 +209,7 @@ export async function createTenant(data: { name: string; domain?: string; theme_
   })
 }
 
-export async function updateTenant(tenantId: string, data: { name?: string; domain?: string; theme_config?: any }) {
+export async function updateTenant(tenantId: string, data: { name?: string; domain?: string; theme_config?: any; certificateSignature?: string | null }) {
   return fetchJson(`/tenants/${tenantId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
