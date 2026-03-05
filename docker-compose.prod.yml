@@ -67,6 +67,7 @@ services:
       CSRF_SECRET: ${CSRF_SECRET}
       PORT: 4000
       FRONTEND_URL: https://${BASE_DOMAIN}
+      FRONTEND_ORIGINS: https://${BASE_DOMAIN}
       # Mailgun configuration
       MAILGUN_API_KEY: ${MAILGUN_API_KEY}
       MAILGUN_DOMAIN: ${MAILGUN_DOMAIN}
