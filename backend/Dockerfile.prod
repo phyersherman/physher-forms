@@ -30,8 +30,8 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-# Install wget for healthcheck
-RUN apk add --no-cache wget
+# Install wget for healthcheck and OpenSSL for Prisma
+RUN apk add --no-cache wget openssl libc6-compat
 
 ENV NODE_ENV=production
 
