@@ -22,7 +22,7 @@ A     *       YOUR_SERVER_IP
 ### 3. Deploy Application (5 minutes)
 ```bash
 # Clone repo
-git clone https://github.com/YOUR_ORG/YOUR_REPO.git lms && cd lms
+git clone https://github.com/phyersherman/lms lms && cd lms
 
 # Configure environment
 cp .env.production.example .env.production
