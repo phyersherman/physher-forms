@@ -9,10 +9,11 @@ import * as certificateService from './certificate-service'
 /**
  * Helper: Get the chapter containing a module
  */
-const getChapterContainingModule = async (moduleId: string, courseId: string) => {
+const getChapterContainingModule = async (moduleId: string, courseId: string, tenantId: string) => {
   const chapter = await prisma.chapter.findFirst({
     where: {
-      courseId,
+      course_id: courseId,
+      tenant_id: tenantId,
       modules: {
         some: {
           id: moduleId,
@@ -39,7 +40,7 @@ const isLastModuleInChapter = (chapter: any, moduleId: string): boolean => {
 /**
  * Helper: Get the next chapter in the course
  */
-const getNextChapter = async (currentChapterId: string, courseId: string) => {
+const getNextChapter = async (currentChapterId: string, courseId: string, tenantId: string) => {
   // Get the current chapter's order
   const currentChapter = await prisma.chapter.findUnique({
     where: { id: currentChapterId },
@@ -51,7 +52,8 @@ const getNextChapter = async (currentChapterId: string, courseId: string) => {
   // Find the next chapter
   const nextChapter = await prisma.chapter.findFirst({
     where: {
-      courseId,
+      course_id: courseId,
+      tenant_id: tenantId,
       order_index: {
         gt: currentChapter.order_index,
       },
@@ -72,33 +74,42 @@ const getNextChapter = async (currentChapterId: string, courseId: string) => {
  */
 const areAllRequiredModulesCompleted = async (
   courseId: string,
-  userId: string
+  userId: string,
+  tenantId: string
 ): Promise<boolean> => {
-  // Get all required modules
-  const requiredModules = await prisma.module.findMany({
+  // Get all required modules in this course by finding chapters first
+  const chapters = await prisma.chapter.findMany({
     where: {
-      courseId,
-      required: true,
+      course_id: courseId,
+      tenant_id: tenantId,
     },
-    select: { id: true },
+    include: {
+      modules: {
+        where: { required: true },
+        select: { id: true },
+      },
+    },
   })
 
-  if (requiredModules.length === 0) return true
+  const requiredModuleIds = chapters.flatMap(c => c.modules.map((m: any) => m.id))
+
+  if (requiredModuleIds.length === 0) return true
 
   // Check which are completed
   const completedModules = await prisma.moduleCompletion.findMany({
     where: {
       courseId,
       userId,
+      tenantId,
       moduleId: {
-        in: requiredModules.map(m => m.id),
+        in: requiredModuleIds,
       },
     },
     select: { moduleId: true },
   })
 
   const completedModuleIds = new Set(completedModules.map(c => c.moduleId))
-  return requiredModules.every(m => completedModuleIds.has(m.id))
+  return requiredModuleIds.every(id => completedModuleIds.has(id))
 }
 
 /**
@@ -109,64 +120,90 @@ const areAllRequiredModulesCompleted = async (
  * - Returning next chapter info for navigation
  */
 const completeModule = async (moduleId: string, userId: string, courseId: string, tenantId: string) => {
-  // Check if already completed
+  // Validate that module exists by finding its chapter first
+  const module = await prisma.module.findUnique({
+    where: { id: moduleId },
+    include: {
+      chapter: {
+        select: { course_id: true, tenant_id: true },
+      },
+    },
+  })
+
+  if (!module || module.chapter.course_id !== courseId || module.chapter.tenant_id !== tenantId) {
+    throw new Error('Module not found or does not belong to this course')
+  }
+
+  // Validate user is enrolled in the course
+  const enrollment = await prisma.enrollment.findUnique({
+    where: { tenantId_courseId_userId: { tenantId, courseId, userId } },
+    select: { id: true },
+  })
+
+  if (!enrollment) {
+    throw new Error('User is not enrolled in this course')
+  }
+
+  // Check if already completed and return enriched response
   const existing = await prisma.moduleCompletion.findFirst({
     where: { moduleId, userId, courseId },
   })
 
-  if (existing) {
-    return existing
-  }
-
-  // Mark module as completed
-  const moduleCompletion = await prisma.moduleCompletion.create({
-    data: {
-      moduleId,
-      userId,
-      courseId,
-      tenantId,
-    },
-  })
-
-  // Get the chapter containing this module
-  const chapter = await getChapterContainingModule(moduleId, courseId)
-
+  // Get chapter info regardless of whether it's new or existing completion
+  const chapter = await getChapterContainingModule(moduleId, courseId, tenantId)
   let nextChapter = null
   let courseCompleted = false
 
-  if (chapter) {
-    // Check if this is the last module in the chapter
-    if (isLastModuleInChapter(chapter, moduleId)) {
+  // If this is a new completion, perform all the side effects
+  if (!existing) {
+    await prisma.moduleCompletion.create({
+      data: {
+        moduleId,
+        userId,
+        courseId,
+        tenantId,
+      },
+    })
+
+    if (chapter && isLastModuleInChapter(chapter, moduleId)) {
       // Auto-mark the chapter as completed
       await completeChapter(chapter.id, userId, courseId, tenantId)
-
       // Check if there's a next chapter
-      nextChapter = await getNextChapter(chapter.id, courseId)
+      nextChapter = await getNextChapter(chapter.id, courseId, tenantId)
     }
-  }
 
-  // Check if all required modules are now completed
-  const allRequiredCompleted = await areAllRequiredModulesCompleted(courseId, userId)
-  if (allRequiredCompleted) {
-    try {
-      // Auto-complete the course and generate certificate
-      await completeCourse(courseId, userId, tenantId)
-      courseCompleted = true
-    } catch (err) {
-      console.error('Error auto-completing course:', err)
-      // Don't throw - module completion still succeeded
+    // Check if all required modules are now completed
+    const allRequiredCompleted = await areAllRequiredModulesCompleted(courseId, userId, tenantId)
+    if (allRequiredCompleted) {
+      try {
+        // Auto-complete the course and generate certificate
+        await completeCourse(courseId, userId, tenantId)
+        courseCompleted = true
+      } catch (err) {
+        console.error('Error auto-completing course:', err)
+        // Don't throw - module completion still succeeded
+      }
+    }
+  } else {
+    // For existing completion, still return chapter info if available
+    if (chapter && isLastModuleInChapter(chapter, moduleId)) {
+      nextChapter = await getNextChapter(chapter.id, courseId, tenantId)
     }
   }
 
   return {
-    ...moduleCompletion,
+    id: moduleId,
+    userId,
+    courseId,
+    tenantId,
+    completedAt: existing?.completedAt || new Date(),
     chapterId: chapter?.id,
     isLastModuleInChapter: chapter ? isLastModuleInChapter(chapter, moduleId) : false,
     nextChapter: nextChapter ? {
       id: nextChapter.id,
       title: nextChapter.title,
       order_index: nextChapter.order_index,
-      modules: nextChapter.modules.map(m => ({
+      modules: nextChapter.modules.map((m: any) => ({
         id: m.id,
         title: m.title,
         order_index: m.order_index,
@@ -248,7 +285,7 @@ const completeCourse = async (courseId: string, userId: string, tenantId: string
  * Get course progress for a user
  * Returns completed modules, chapters, and overall progress percentage
  */
-const getCourseProgress = async (courseId: string, userId: string) => {
+const getCourseProgress = async (courseId: string, userId: string, tenantId: string) => {
   // Get the course with all chapters and modules
   const course = await prisma.course.findUnique({
     where: { id: courseId },
@@ -290,7 +327,7 @@ const getCourseProgress = async (courseId: string, userId: string) => {
   // Check course completion
   const enrollment = await prisma.enrollment.findUnique({
     where: {
-      tenantId_courseId_userId: { tenantId: course.tenant_id!, courseId, userId },
+      tenantId_courseId_userId: { tenantId, courseId, userId },
     },
   })
 

@@ -99,8 +99,9 @@ export const getCourseProgress = async (req: Request, res: Response) => {
   try {
     const courseId = Array.isArray(req.params.courseId) ? req.params.courseId[0] : req.params.courseId
     const userId = req.user?.id
+    const tenantId = req.user?.tenantId
 
-    if (!userId) {
+    if (!userId || !tenantId) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
@@ -108,7 +109,7 @@ export const getCourseProgress = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Missing courseId' })
     }
 
-    const progress = await progressService.getCourseProgress(courseId, userId)
+    const progress = await progressService.getCourseProgress(courseId, userId, tenantId)
     res.json(progress)
   } catch (error: any) {
     console.error('Error getting course progress:', error)
