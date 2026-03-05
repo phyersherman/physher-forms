@@ -4,6 +4,7 @@ import progressService from '../services/progressService'
 /**
  * POST /modules/:moduleId/complete
  * Mark a module as completed
+ * Also handles auto-completing chapters and courses, and returns next chapter for navigation
  */
 export const completeModule = async (req: Request, res: Response) => {
   try {
@@ -21,7 +22,16 @@ export const completeModule = async (req: Request, res: Response) => {
     }
 
     const completion = await progressService.completeModule(moduleId, userId, courseId, tenantId)
-    res.json(completion)
+    
+    // Return completion data along with chapter/course completion info
+    res.json({
+      success: true,
+      moduleCompletion: completion,
+      // Client can use these to handle UI navigation and celebrations
+      chapterCompleted: completion.isLastModuleInChapter,
+      nextChapter: completion.nextChapter,
+      courseCompleted: completion.courseCompleted,
+    })
   } catch (error: any) {
     console.error('Error completing module:', error)
     res.status(500).json({ error: error.message || 'Failed to complete module' })

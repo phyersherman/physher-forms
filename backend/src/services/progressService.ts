@@ -7,7 +7,106 @@ import * as certificateService from './certificate-service'
  */
 
 /**
+ * Helper: Get the chapter containing a module
+ */
+const getChapterContainingModule = async (moduleId: string, courseId: string) => {
+  const chapter = await prisma.chapter.findFirst({
+    where: {
+      courseId,
+      modules: {
+        some: {
+          id: moduleId,
+        },
+      },
+    },
+    include: {
+      modules: {
+        orderBy: { order_index: 'asc' },
+      },
+    },
+  })
+  return chapter
+}
+
+/**
+ * Helper: Check if a module is the last module in its chapter
+ */
+const isLastModuleInChapter = (chapter: any, moduleId: string): boolean => {
+  if (!chapter || !chapter.modules || chapter.modules.length === 0) return false
+  return chapter.modules[chapter.modules.length - 1].id === moduleId
+}
+
+/**
+ * Helper: Get the next chapter in the course
+ */
+const getNextChapter = async (currentChapterId: string, courseId: string) => {
+  // Get the current chapter's order
+  const currentChapter = await prisma.chapter.findUnique({
+    where: { id: currentChapterId },
+    select: { order_index: true },
+  })
+
+  if (!currentChapter) return null
+
+  // Find the next chapter
+  const nextChapter = await prisma.chapter.findFirst({
+    where: {
+      courseId,
+      order_index: {
+        gt: currentChapter.order_index,
+      },
+    },
+    orderBy: { order_index: 'asc' },
+    include: {
+      modules: {
+        orderBy: { order_index: 'asc' },
+      },
+    },
+  })
+
+  return nextChapter || null
+}
+
+/**
+ * Helper: Check if all required modules in a course are completed
+ */
+const areAllRequiredModulesCompleted = async (
+  courseId: string,
+  userId: string
+): Promise<boolean> => {
+  // Get all required modules
+  const requiredModules = await prisma.module.findMany({
+    where: {
+      courseId,
+      required: true,
+    },
+    select: { id: true },
+  })
+
+  if (requiredModules.length === 0) return true
+
+  // Check which are completed
+  const completedModules = await prisma.moduleCompletion.findMany({
+    where: {
+      courseId,
+      userId,
+      moduleId: {
+        in: requiredModules.map(m => m.id),
+      },
+    },
+    select: { moduleId: true },
+  })
+
+  const completedModuleIds = new Set(completedModules.map(c => c.moduleId))
+  return requiredModules.every(m => completedModuleIds.has(m.id))
+}
+
+/**
  * Mark a module as completed
+ * Also handles:
+ * - Auto-completing the chapter if this is the last module
+ * - Auto-completing the course if all required modules are done
+ * - Returning next chapter info for navigation
  */
 const completeModule = async (moduleId: string, userId: string, courseId: string, tenantId: string) => {
   // Check if already completed
@@ -19,7 +118,8 @@ const completeModule = async (moduleId: string, userId: string, courseId: string
     return existing
   }
 
-  return await prisma.moduleCompletion.create({
+  // Mark module as completed
+  const moduleCompletion = await prisma.moduleCompletion.create({
     data: {
       moduleId,
       userId,
@@ -27,6 +127,53 @@ const completeModule = async (moduleId: string, userId: string, courseId: string
       tenantId,
     },
   })
+
+  // Get the chapter containing this module
+  const chapter = await getChapterContainingModule(moduleId, courseId)
+
+  let nextChapter = null
+  let courseCompleted = false
+
+  if (chapter) {
+    // Check if this is the last module in the chapter
+    if (isLastModuleInChapter(chapter, moduleId)) {
+      // Auto-mark the chapter as completed
+      await completeChapter(chapter.id, userId, courseId, tenantId)
+
+      // Check if there's a next chapter
+      nextChapter = await getNextChapter(chapter.id, courseId)
+    }
+  }
+
+  // Check if all required modules are now completed
+  const allRequiredCompleted = await areAllRequiredModulesCompleted(courseId, userId)
+  if (allRequiredCompleted) {
+    try {
+      // Auto-complete the course and generate certificate
+      await completeCourse(courseId, userId, tenantId)
+      courseCompleted = true
+    } catch (err) {
+      console.error('Error auto-completing course:', err)
+      // Don't throw - module completion still succeeded
+    }
+  }
+
+  return {
+    ...moduleCompletion,
+    chapterId: chapter?.id,
+    isLastModuleInChapter: chapter ? isLastModuleInChapter(chapter, moduleId) : false,
+    nextChapter: nextChapter ? {
+      id: nextChapter.id,
+      title: nextChapter.title,
+      order_index: nextChapter.order_index,
+      modules: nextChapter.modules.map(m => ({
+        id: m.id,
+        title: m.title,
+        order_index: m.order_index,
+      })),
+    } : null,
+    courseCompleted,
+  }
 }
 
 /**
