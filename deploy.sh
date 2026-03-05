@@ -106,9 +106,26 @@ info "Running database migrations..."
 docker compose -f "$COMPOSE_FILE" exec -T backend npm run migrate:deploy 2>/dev/null || {
     info "Backend not running yet, starting it first..."
     docker compose -f "$COMPOSE_FILE" up -d backend
-    sleep 5
+    
+    # Wait for backend container to be ready
+    info "Waiting for backend to be ready..."
+    sleep 10
+    for i in $(seq 1 30); do
+        if docker compose -f "$COMPOSE_FILE" exec -T backend sh -c "command -v npm" >/dev/null 2>&1; then
+            info "Backend is ready"
+            break
+        fi
+        if [ $i -eq 30 ]; then
+            error "Backend failed to start"
+            exit 1
+        fi
+        echo -n "."
+        sleep 2
+    done
+    
     docker compose -f "$COMPOSE_FILE" exec -T backend npm run migrate:deploy || {
         error "Database migration failed!"
+        docker compose -f "$COMPOSE_FILE" logs backend
         exit 1
     }
 }
