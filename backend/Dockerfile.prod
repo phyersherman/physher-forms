@@ -38,6 +38,7 @@ ENV NODE_ENV=production
 # Copy necessary files (use builder node_modules which includes Prisma CLI and generated client)
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/templates ./dist/templates
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package*.json ./
 
