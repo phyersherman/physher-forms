@@ -70,15 +70,47 @@ info "Starting LMS deployment..."
 info "Domain: $BASE_DOMAIN"
 info "Image tag: ${IMAGE_TAG:-latest}"
 
+# Check if database volume exists
+DB_VOLUME_EXISTS=$(docker volume ls -q -f name=lms_postgres-data 2>/dev/null || echo "")
+
+if [ -z "$DB_VOLUME_EXISTS" ]; then
+    info "First deployment detected - creating database..."
+fi
+
 # Pull latest images
 info "Pulling latest Docker images..."
 docker compose -f "$COMPOSE_FILE" pull
 
+# Ensure database is running first
+info "Starting infrastructure services..."
+docker compose -f "$COMPOSE_FILE" up -d traefik postgres
+
+# Wait for database to be ready
+info "Waiting for database to be ready..."
+sleep 10
+for i in $(seq 1 30); do
+    if docker compose -f "$COMPOSE_FILE" exec -T postgres pg_isready -U lms 2>/dev/null | grep -q "accepting connections"; then
+        info "Database is ready"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        error "Database failed to start"
+        exit 1
+    fi
+    echo -n "."
+    sleep 2
+done
+
 # Run database migrations
 info "Running database migrations..."
-docker compose -f "$COMPOSE_FILE" run --rm backend npm run migrate:deploy || {
-    error "Database migration failed!"
-    exit 1
+docker compose -f "$COMPOSE_FILE" exec -T backend npm run migrate:deploy 2>/dev/null || {
+    info "Backend not running yet, starting it first..."
+    docker compose -f "$COMPOSE_FILE" up -d backend
+    sleep 5
+    docker compose -f "$COMPOSE_FILE" exec -T backend npm run migrate:deploy || {
+        error "Database migration failed!"
+        exit 1
+    }
 }
 
 # Store current container IDs for rollback
