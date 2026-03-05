@@ -15,6 +15,7 @@ NC='\033[0m' # No Color
 # Configuration
 ENV_FILE=".env.production"
 COMPOSE_FILE="docker-compose.prod.yml"
+COMPOSE_CMD="docker compose --env-file ${ENV_FILE} -f ${COMPOSE_FILE}"
 HEALTH_CHECK_RETRIES=30
 HEALTH_CHECK_INTERVAL=2
 
@@ -79,17 +80,17 @@ fi
 
 # Pull latest images
 info "Pulling latest Docker images..."
-docker compose -f "$COMPOSE_FILE" pull
+$COMPOSE_CMD pull
 
 # Ensure database is running first
 info "Starting infrastructure services..."
-docker compose -f "$COMPOSE_FILE" up -d traefik postgres
+$COMPOSE_CMD up -d traefik postgres
 
 # Wait for database to be ready
 info "Waiting for database to be ready..."
 sleep 10
 for i in $(seq 1 30); do
-    if docker compose -f "$COMPOSE_FILE" exec -T postgres pg_isready -U lms 2>/dev/null | grep -q "accepting connections"; then
+    if $COMPOSE_CMD exec -T postgres pg_isready -U lms 2>/dev/null | grep -q "accepting connections"; then
         info "Database is ready"
         break
     fi
@@ -103,15 +104,15 @@ done
 
 # Run database migrations
 info "Running database migrations..."
-docker compose -f "$COMPOSE_FILE" exec -T backend npm run migrate:deploy 2>/dev/null || {
+$COMPOSE_CMD exec -T backend npm run migrate:deploy 2>/dev/null || {
     info "Backend not running yet, starting it first..."
-    docker compose -f "$COMPOSE_FILE" up -d backend
+    $COMPOSE_CMD up -d backend
     
     # Wait for backend container to be ready
     info "Waiting for backend to be ready..."
     sleep 10
     for i in $(seq 1 30); do
-        if docker compose -f "$COMPOSE_FILE" exec -T backend sh -c "command -v npm" >/dev/null 2>&1; then
+        if $COMPOSE_CMD exec -T backend sh -c "command -v npm" >/dev/null 2>&1; then
             info "Backend is ready"
             break
         fi
@@ -123,9 +124,9 @@ docker compose -f "$COMPOSE_FILE" exec -T backend npm run migrate:deploy 2>/dev/
         sleep 2
     done
     
-    docker compose -f "$COMPOSE_FILE" exec -T backend npm run migrate:deploy || {
+    $COMPOSE_CMD exec -T backend npm run migrate:deploy || {
         error "Database migration failed!"
-        docker compose -f "$COMPOSE_FILE" logs backend
+        $COMPOSE_CMD logs backend
         exit 1
     }
 }
@@ -137,7 +138,7 @@ OLD_FRONTEND=$(docker ps -q -f name=lms-frontend 2>/dev/null || echo "")
 info "Starting updated services..."
 
 # Start backend first
-docker compose -f "$COMPOSE_FILE" up -d backend
+$COMPOSE_CMD up -d backend
 
 # Wait for backend to be healthy
 if ! check_health "backend" "lms-backend"; then
@@ -152,7 +153,7 @@ if ! check_health "backend" "lms-backend"; then
 fi
 
 # Start frontend
-docker compose -f "$COMPOSE_FILE" up -d frontend
+$COMPOSE_CMD up -d frontend
 
 # Wait for frontend to be healthy
 if ! check_health "frontend" "lms-frontend"; then
@@ -176,7 +177,7 @@ info ""
 
 # Check if this is first deployment (no admin user exists)
 info "Checking for admin user..."
-ADMIN_COUNT=$(docker compose -f "$COMPOSE_FILE" exec -T backend sh -c "
+ADMIN_COUNT=$($COMPOSE_CMD exec -T backend sh -c "
   node -e \"
     const { PrismaClient } = require('@prisma/client');
     const prisma = new PrismaClient();
