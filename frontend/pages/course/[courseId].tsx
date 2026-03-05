@@ -516,29 +516,24 @@ const ModuleView: React.FC<ModuleViewProps> = ({
     try {
       const response = await api.completeModule(moduleId, courseId)
       
-      // Update progress
+      // Update progress in parent
       onProgressUpdate()
 
-      // Handle automatic course completion and certificate generation
+      // Handle automatic course completion (parent will show completion screen)
       if (response.courseCompleted) {
-        // Course is now complete - show completion screen
-        setShowCompletionScreen(true)
-        
-        // Briefly show a success message then redirect to course page
-        setTimeout(() => {
-          router.push(`/course/${courseId}`)
-        }, 3000)
+        // Parent component will detect courseCompleted=true and show UI
         return
       }
 
-      // Handle automatic chapter completion and chapter advancement
+      // Handle automatic chapter completion and navigation to next chapter
       if (response.chapterCompleted && response.nextChapter) {
         // Navigate to the first module of the next chapter
         const firstModuleOfNextChapter = response.nextChapter.modules?.[0]
         if (firstModuleOfNextChapter) {
           // Wait a moment to show completion UI before navigating
           setTimeout(() => {
-            router.push(`/course/${courseId}?chapter=${response.nextChapter.id}&module=${firstModuleOfNextChapter.id}`)
+            onChapterSelect(response.nextChapter.id)
+            onModuleSelect(firstModuleOfNextChapter.id)
           }, 1500)
         }
         return
@@ -547,7 +542,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({
       // Handle next module in same chapter
       if (nextModule && !isLastModule) {
         setTimeout(() => {
-          router.push(`/course/${courseId}?chapter=${chapterId}&module=${nextModule.id}`)
+          onModuleSelect(nextModule.id)
         }, 1000)
       }
     } catch (err) {
