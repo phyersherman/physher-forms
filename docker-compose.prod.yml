@@ -85,18 +85,11 @@ services:
       start_period: 40s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`${BASE_DOMAIN}`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.backend.entrypoints=websecure"
-      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.backend.priority=100"
-      - "traefik.http.routers.backend.service=backend"
+      # Main domain - HTTP only for testing
+      - "traefik.http.routers.backend-http.rule=Host(`${BASE_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend-http.entrypoints=web"
+      - "traefik.http.routers.backend-http.service=backend"
       - "traefik.http.services.backend.loadbalancer.server.port=4000"
-      # Wildcard SSL for all subdomains
-      - "traefik.http.routers.backend-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${BASE_DOMAIN}`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.backend-wildcard.entrypoints=websecure"
-      - "traefik.http.routers.backend-wildcard.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.backend-wildcard.tls.domains[0].main=${BASE_DOMAIN}"
-      - "traefik.http.routers.backend-wildcard.tls.domains[0].sans=*.${BASE_DOMAIN}"
     networks:
       - lms-network
 
@@ -118,24 +111,11 @@ services:
       start_period: 40s
     labels:
       - "traefik.enable=true"
-      # Main domain
-      - "traefik.http.routers.frontend.rule=Host(`${BASE_DOMAIN}`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.frontend.priority=100"
-      - "traefik.http.routers.frontend.service=frontend"
+      # Main domain - HTTP only for testing
+      - "traefik.http.routers.frontend-http.rule=Host(`${BASE_DOMAIN}`)"
+      - "traefik.http.routers.frontend-http.entrypoints=web"
+      - "traefik.http.routers.frontend-http.service=frontend"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
-      # Wildcard for all tenant subdomains
-      - "traefik.http.routers.frontend-wildcard.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.${BASE_DOMAIN}`)"
-      - "traefik.http.routers.frontend-wildcard.entrypoints=websecure"
-      - "traefik.http.routers.frontend-wildcard.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.frontend-wildcard.tls.domains[0].main=${BASE_DOMAIN}"
-      - "traefik.http.routers.frontend-wildcard.tls.domains[0].sans=*.${BASE_DOMAIN}"
-      # HTTP to HTTPS redirect
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
-      - "traefik.http.routers.http-catchall.entrypoints=web"
-      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
     networks:
       - lms-network
 
