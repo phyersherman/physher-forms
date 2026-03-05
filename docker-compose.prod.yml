@@ -3,11 +3,9 @@ version: '3.8'
 services:
   # Traefik reverse proxy with automatic SSL
   traefik:
-    image: traefik:v2.10
+    image: traefik:v3.0
     container_name: lms-traefik
     restart: unless-stopped
-    environment:
-      - DOCKER_API_VERSION=1.43
     command:
       - "--api.dashboard=true"
       - "--providers.docker=true"
