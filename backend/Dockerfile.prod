@@ -35,8 +35,8 @@ RUN apk add --no-cache wget openssl libc6-compat
 
 ENV NODE_ENV=production
 
-# Copy necessary files
-COPY --from=deps /app/node_modules ./node_modules
+# Copy necessary files (use builder node_modules which includes Prisma CLI and generated client)
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package*.json ./
