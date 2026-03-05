@@ -85,11 +85,17 @@ services:
       start_period: 40s
     labels:
       - "traefik.enable=true"
-      # Main domain - HTTP only for testing
+      # HTTP to HTTPS redirect
       - "traefik.http.routers.backend-http.rule=Host(`${BASE_DOMAIN}`) && PathPrefix(`/api`)"
       - "traefik.http.routers.backend-http.entrypoints=web"
-      - "traefik.http.routers.backend-http.service=backend"
+      - "traefik.http.routers.backend-http.middlewares=redirect-to-https"
+      # HTTPS
+      - "traefik.http.routers.backend.rule=Host(`${BASE_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend.service=backend"
       - "traefik.http.services.backend.loadbalancer.server.port=4000"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     networks:
       - lms-network
 
@@ -111,10 +117,15 @@ services:
       start_period: 40s
     labels:
       - "traefik.enable=true"
-      # Main domain - HTTP only for testing
+      # HTTP to HTTPS redirect
       - "traefik.http.routers.frontend-http.rule=Host(`${BASE_DOMAIN}`)"
       - "traefik.http.routers.frontend-http.entrypoints=web"
-      - "traefik.http.routers.frontend-http.service=frontend"
+      - "traefik.http.routers.frontend-http.middlewares=redirect-to-https"
+      # HTTPS
+      - "traefik.http.routers.frontend.rule=Host(`${BASE_DOMAIN}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.frontend.service=frontend"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
     networks:
       - lms-network
