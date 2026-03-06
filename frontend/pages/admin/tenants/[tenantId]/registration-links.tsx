@@ -132,9 +132,10 @@ const RegistrationLinksPage: React.FC = () => {
     }
   }
 
-  const handleCopyUrl = (url: string) => {
+  const handleCopyUrl = (token: string, linkId: string) => {
+    const url = `${window.location.origin}/accept-invite?token=${token}`
     navigator.clipboard.writeText(url)
-    setCopiedUrl(url)
+    setCopiedUrl(linkId)
     setTimeout(() => setCopiedUrl(null), 2000)
   }
 
@@ -271,7 +272,7 @@ const RegistrationLinksPage: React.FC = () => {
                     </td>
                     <td style={{ display: 'flex', gap: 8, fontSize: 14 }}>
                       <button
-                        onClick={() => handleCopyUrl(link.url)}
+                        onClick={() => handleCopyUrl(link.token, link.id)}
                         style={{
                           background: 'none',
                           border: 'none',
@@ -283,7 +284,7 @@ const RegistrationLinksPage: React.FC = () => {
                         }}
                         title="Copy URL"
                       >
-                        {copiedUrl === link.url ? '✓ Copied' : '📋 Copy'}
+                        {copiedUrl === link.id ? '✓ Copied' : '📋 Copy'}
                       </button>
                       {' | '}
                       <button
