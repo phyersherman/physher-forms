@@ -213,27 +213,21 @@ const isModuleAccessible = async (
       }
     }
 
-    // Check if PREVIOUS module requires quiz pass to continue to THIS module
-    if (previousModule.requires_quiz_pass_to_continue) {
-      const quizBlock = previousModule.blocks.find((b) => b.type === 'quiz')
+    // Check if previous module has any quiz blocks that must be passed
+    const prevQuizBlocks = previousModule.blocks.filter((b) => b.type === 'quiz')
+    for (const quizBlock of prevQuizBlocks) {
+      const passedAttempt = await prisma.quizAttempt.findFirst({
+        where: {
+          blockId: quizBlock.id,
+          userId,
+          passed: true,
+        },
+      })
 
-      if (quizBlock) {
-        const passedAttempt = await prisma.quizAttempt.findFirst({
-          where: {
-            blockId: quizBlock.id,
-            userId,
-            passed: true,
-          },
-          orderBy: {
-            submittedAt: 'desc',
-          },
-        })
-
-        if (!passedAttempt) {
-          return {
-            accessible: false,
-            reason: `You must pass the quiz in "${previousModule.title}" before accessing this module.`,
-          }
+      if (!passedAttempt) {
+        return {
+          accessible: false,
+          reason: `You must pass the quiz in "${previousModule.title}" before accessing this module.`,
         }
       }
     }

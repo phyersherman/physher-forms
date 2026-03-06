@@ -147,20 +147,19 @@ const completeModule = async (moduleId: string, userId: string, courseId: string
     }
   }
 
-  // Check if this module requires a quiz pass before it can be marked complete
+  // Check if this module has any quiz blocks — all must be passed before completion
   const moduleData = await prisma.module.findUnique({
     where: { id: moduleId },
     include: { blocks: { where: { type: 'quiz' } } },
   })
 
-  if (moduleData?.requires_quiz_pass_to_continue) {
-    const quizBlock = moduleData.blocks[0]
-    if (quizBlock) {
+  if (moduleData?.blocks && moduleData.blocks.length > 0) {
+    for (const quizBlock of moduleData.blocks) {
       const passedAttempt = await prisma.quizAttempt.findFirst({
         where: { blockId: quizBlock.id, userId, passed: true },
       })
       if (!passedAttempt) {
-        throw new Error('You must pass the quiz in this module before marking it complete.')
+        throw new Error('You must pass all quizzes in this module before marking it complete.')
       }
     }
   }
