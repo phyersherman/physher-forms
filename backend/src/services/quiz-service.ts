@@ -48,20 +48,38 @@ const submitQuizAttempt = async (submission: QuizSubmission): Promise<QuizAttemp
   let correctCount = 0
   let totalPoints = 0
 
-  questions.forEach((question: any) => {
+  questions.forEach((question: any, idx: number) => {
     const points = question.points || 1
     totalPoints += points
 
-    const userAnswer = submission.answers[question.id]
+    // Normalize question ID to match frontend normalization
+    const questionId = question.id || `q${idx + 1}`
+    const userAnswer = submission.answers[questionId]
+
+    // Normalize correct answer — handle alternate field names
+    let correctAnswer = question.correctAnswer
+    if (correctAnswer === undefined && question.correct !== undefined && question.options) {
+      if (typeof question.correct === 'number' && question.options[question.correct] !== undefined) {
+        correctAnswer = question.options[question.correct]
+      } else {
+        correctAnswer = String(question.correct)
+      }
+    }
+    if (correctAnswer === undefined && question.answer !== undefined) {
+      correctAnswer = question.answer
+    }
+
+    // Normalize type
+    const rawType = (question.type || 'multiple-choice').toLowerCase().replace(/_/g, '-')
     let isCorrect = false
 
-    if (question.type === 'multiple-choice' || question.type === 'true-false') {
-      isCorrect = userAnswer === question.correctAnswer
-    } else if (question.type === 'short-answer') {
-      // Case-insensitive comparison for short answers
+    if (rawType === 'multiple-choice' || rawType === 'true-false' || rawType === 'truefalse') {
+      isCorrect = userAnswer === correctAnswer ||
+        (Array.isArray(correctAnswer) && correctAnswer.includes(userAnswer))
+    } else if (rawType === 'short-answer' || rawType === 'shortanswer') {
       isCorrect =
         userAnswer?.toLowerCase().trim() ===
-        (question.correctAnswer as string)?.toLowerCase().trim()
+        (correctAnswer as string)?.toLowerCase().trim()
     }
 
     if (isCorrect) {
