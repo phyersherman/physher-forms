@@ -717,11 +717,28 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block, courseId }) => {
     const config = block.config ? JSON.parse(block.config) : {}
     let videoUrl = config.url || block.content || ''
 
-    // Convert YouTube watch URLs to embed URLs
-    const ytMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/)
-    if (ytMatch) {
-      videoUrl = `https://www.youtube.com/embed/${ytMatch[1]}`
-    }
+    // Convert YouTube URLs to embed format (handles watch, shorts, live, youtu.be)
+    try {
+      const urlObj = new URL(videoUrl)
+      const host = urlObj.hostname.replace(/^www\./, '')
+      if (host === 'youtube.com' || host === 'm.youtube.com') {
+        const vid = urlObj.searchParams.get('v')
+        if (vid) {
+          videoUrl = `https://www.youtube.com/embed/${vid}`
+        } else {
+          const pathMatch = urlObj.pathname.match(/\/(shorts|live|embed)\/([\w-]+)/)
+          if (pathMatch && pathMatch[1] !== 'embed') {
+            videoUrl = `https://www.youtube.com/embed/${pathMatch[2]}`
+          }
+        }
+      } else if (host === 'youtu.be') {
+        const id = urlObj.pathname.slice(1)
+        if (id) videoUrl = `https://www.youtube.com/embed/${id}`
+      } else if (host === 'vimeo.com') {
+        const vimeoId = urlObj.pathname.split('/').pop()
+        if (vimeoId) videoUrl = `https://player.vimeo.com/video/${vimeoId}`
+      }
+    } catch { /* not a valid URL, use as-is */ }
 
     return (
       <div style={{ marginBottom: '20px' }}>

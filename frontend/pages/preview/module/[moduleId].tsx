@@ -31,7 +31,24 @@ const ModulePreview: React.FC = () => {
         <div key={block.id} style={{ marginBottom: 20 }}>
           {block.type === 'text' && <div dangerouslySetInnerHTML={{ __html: block.content }} />}
           {block.type === 'image' && <img src={block.content} alt="Image" style={{ maxWidth: '100%' }} />}
-          {block.type === 'video' && <iframe src={block.content} width="560" height="315" frameBorder="0" allowFullScreen />}
+          {block.type === 'video' && (() => {
+            let src = block.content || ''
+            try {
+              const urlObj = new URL(src)
+              const host = urlObj.hostname.replace(/^www\./, '')
+              if (host === 'youtube.com' || host === 'm.youtube.com') {
+                const vid = urlObj.searchParams.get('v')
+                if (vid) src = `https://www.youtube.com/embed/${vid}`
+                else {
+                  const m = urlObj.pathname.match(/\/(shorts|live|embed)\/([\w-]+)/)
+                  if (m) src = `https://www.youtube.com/embed/${m[2]}`
+                }
+              } else if (host === 'youtu.be') {
+                src = `https://www.youtube.com/embed/${urlObj.pathname.slice(1)}`
+              }
+            } catch {}
+            return <iframe src={src} width="560" height="315" frameBorder="0" allowFullScreen />
+          })()}
           {/* Add more block types */}
         </div>
       ))}
