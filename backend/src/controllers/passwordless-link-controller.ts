@@ -25,7 +25,8 @@ export async function createPasswordlessLink(req: Request, res: Response) {
 
     // Verify user has access to this tenant
     const user = (req as any).user;
-    if (user.role !== 'globalAdmin' && user.tenantId !== tenantId) {
+    const isGlobalAdmin = user.tenantId === null && user.role === 'admin';
+    if (!isGlobalAdmin && user.tenantId !== tenantId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -65,7 +66,8 @@ export async function getPasswordlessLinks(req: Request, res: Response) {
 
     // Verify user has access to this tenant
     const user = (req as any).user;
-    if (user.role !== 'globalAdmin' && user.tenantId !== tenantId) {
+    const isGlobalAdmin = user.tenantId === null && user.role === 'admin';
+    if (!isGlobalAdmin && user.tenantId !== tenantId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -100,7 +102,8 @@ export async function getPasswordlessLinkById(req: Request, res: Response) {
 
     // Verify user has access to this tenant
     const user = (req as any).user;
-    if (user.role !== 'globalAdmin' && user.tenantId !== link.tenantId) {
+    const isGlobalAdmin = user.tenantId === null && user.role === 'admin';
+    if (!isGlobalAdmin && user.tenantId !== link.tenantId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -133,7 +136,8 @@ export async function updatePasswordlessLink(req: Request, res: Response) {
 
     // Verify user has access to this tenant
     const user = (req as any).user;
-    if (user.role !== 'globalAdmin' && user.tenantId !== existingLink.tenantId) {
+    const isGlobalAdmin = user.tenantId === null && user.role === 'admin';
+    if (!isGlobalAdmin && user.tenantId !== existingLink.tenantId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -172,7 +176,8 @@ export async function togglePasswordlessLink(req: Request, res: Response) {
 
     // Verify user has access to this tenant
     const user = (req as any).user;
-    if (user.role !== 'globalAdmin' && user.tenantId !== existingLink.tenantId) {
+    const isGlobalAdmin = user.tenantId === null && user.role === 'admin';
+    if (!isGlobalAdmin && user.tenantId !== existingLink.tenantId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -201,7 +206,8 @@ export async function deletePasswordlessLink(req: Request, res: Response) {
 
     // Verify user has access to this tenant
     const user = (req as any).user;
-    if (user.role !== 'globalAdmin' && user.tenantId !== existingLink.tenantId) {
+    const isGlobalAdmin = user.tenantId === null && user.role === 'admin';
+    if (!isGlobalAdmin && user.tenantId !== existingLink.tenantId) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
