@@ -126,13 +126,6 @@ const CourseViewPage: React.FC = () => {
     )
   }
 
-  // Auto-expand the chapter containing the selected module
-  useEffect(() => {
-    if (selectedChapterId && !expandedChapterIds.includes(selectedChapterId)) {
-      setExpandedChapterIds(prev => [...prev, selectedChapterId])
-    }
-  }, [selectedChapterId])
-
   if (loading) {
     return (
       <LearnerLayout title="Loading Course">
@@ -320,7 +313,10 @@ const CourseViewPage: React.FC = () => {
               chapterId={selectedChapterId}
               moduleId={selectedModuleId}
               onModuleSelect={setSelectedModuleId}
-              onChapterSelect={setSelectedChapterId}
+              onChapterSelect={(chId) => {
+                setSelectedChapterId(chId)
+                setExpandedChapterIds(prev => prev.includes(chId) ? prev : [...prev, chId])
+              }}
               course={course}
               progress={progress}
               onProgressUpdate={() => {
