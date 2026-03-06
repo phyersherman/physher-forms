@@ -29,7 +29,12 @@ const LoginPage: React.FC = () => {
       const returnTo = (router.query.returnTo as string) || '/'
       router.push(returnTo)
     } catch (err: any) {
-      setError(err?.message || 'Login failed')
+      // Check if we have rate limit info
+      if (err?.payload?.rateLimitInfo) {
+        setError(err.payload.rateLimitInfo.message)
+      } else {
+        setError(err?.message || 'Login failed')
+      }
     } finally {
       setLoading(false)
     }

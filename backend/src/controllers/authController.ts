@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import authService from '../services/authService'
 import * as emailService from '../services/emailService'
+import { isRateLimited, recordFailedAttempt, clearAttempts, getRemainingAttempts, getResetTime } from '../middleware/loginAttemptTracker'
 
 function cookieOptions(maxAgeDays: number) {
   return {
@@ -16,10 +17,38 @@ function cookieOptions(maxAgeDays: number) {
 const login = async (req: Request, res: Response) => {
   const { email, password } = req.body
   if (!email || !password) return res.status(400).json({ error: 'email and password required' })
+
+  // Check if user is rate limited
+  if (isRateLimited(email)) {
+    const resetTime = getResetTime(email)
+    return res.status(429).json({
+      error: 'Too many failed login attempts',
+      rateLimitInfo: {
+        remainingAttempts: 0,
+        resetTimeSeconds: resetTime,
+        message: `Too many failed attempts. Please try again in ${resetTime} seconds.`
+      }
+    })
+  }
   
   // Pass tenantId from tenantResolver middleware (if available)
   const result = await authService.authenticate(email, password, req.tenantId)
-  if (!result) return res.status(401).json({ error: 'invalid credentials' })
+  if (!result) {
+    recordFailedAttempt(email)
+    const remainingAttempts = getRemainingAttempts(email)
+    return res.status(401).json({
+      error: 'invalid credentials',
+      rateLimitInfo: {
+        remainingAttempts,
+        message: remainingAttempts > 0 
+          ? `Incorrect email or password. ${remainingAttempts} attempt${remainingAttempts !== 1 ? 's' : ''} remaining.`
+          : 'Too many failed attempts. Please try again later.'
+      }
+    })
+  }
+
+  // Clear failed attempts on successful login
+  clearAttempts(email)
 
   const accessToken = result.accessToken
   const refresh = result.refresh

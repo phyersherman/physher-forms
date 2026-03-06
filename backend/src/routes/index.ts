@@ -204,7 +204,7 @@ router.get('/health', (_req: Request, res: Response) => {
 })
 
 // auth
-router.post('/auth/login', authLimiter, authController.login)
+router.post('/auth/login', authController.login)
 router.post('/auth/register', authLimiter, authController.register)
 router.post('/auth/logout', authController.logout)
 router.post('/auth/refresh', authController.refresh)

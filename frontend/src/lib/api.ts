@@ -26,10 +26,16 @@ async function fetchJson(path: string, opts: any = {}, retryCount = 0) {
         return fetchJson(path, opts, retryCount + 1)
       } catch (refreshError) {
         // If refresh fails, throw the original error
-        throw new Error(payload.error || 'Request failed')
+        const err = new Error(payload.error || 'Request failed')
+        ;(err as any).statusCode = res.status
+        ;(err as any).payload = payload
+        throw err
       }
     }
-    throw new Error(payload.error || 'Request failed')
+    const err = new Error(payload.error || 'Request failed')
+    ;(err as any).statusCode = res.status
+    ;(err as any).payload = payload
+    throw err
   }
   return payload
 }
