@@ -4,8 +4,8 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 
 const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('admin@acme.local')
-  const [password, setPassword] = useState('adminpass')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const auth = useAuth()
