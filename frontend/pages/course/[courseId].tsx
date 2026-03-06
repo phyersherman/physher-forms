@@ -126,6 +126,13 @@ const CourseViewPage: React.FC = () => {
     )
   }
 
+  // Auto-expand the chapter containing the selected module
+  useEffect(() => {
+    if (selectedChapterId && !expandedChapterIds.includes(selectedChapterId)) {
+      setExpandedChapterIds(prev => [...prev, selectedChapterId])
+    }
+  }, [selectedChapterId])
+
   if (loading) {
     return (
       <LearnerLayout title="Loading Course">
