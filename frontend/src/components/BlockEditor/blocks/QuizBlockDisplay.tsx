@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { IBlock } from '../types'
+import api from '../../../lib/api'
 
 interface QuizQuestion {
   id: string
@@ -22,9 +23,10 @@ interface QuizConfig {
 
 interface QuizBlockDisplayProps {
   block: IBlock
+  courseId?: string
 }
 
-const QuizBlockDisplay: React.FC<QuizBlockDisplayProps> = ({ block }) => {
+const QuizBlockDisplay: React.FC<QuizBlockDisplayProps> = ({ block, courseId }) => {
   const [config, setConfig] = useState<QuizConfig>({})
   const [answers, setAnswers] = useState<Record<string, any>>({})
   const [submitted, setSubmitted] = useState(false)
@@ -32,6 +34,8 @@ const QuizBlockDisplay: React.FC<QuizBlockDisplayProps> = ({ block }) => {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [quizStarted, setQuizStarted] = useState(false)
   const [isTimeUp, setIsTimeUp] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [alreadyPassed, setAlreadyPassed] = useState(false)
 
   // Normalize questions from various import formats to standard format
   const normalizeQuestions = (questions: any[]): QuizQuestion[] => {
@@ -100,6 +104,20 @@ const QuizBlockDisplay: React.FC<QuizBlockDisplayProps> = ({ block }) => {
     }
   }, [block.config, quizStarted])
 
+  // Load previous quiz attempts to check if already passed
+  useEffect(() => {
+    if (!block.id) return
+    api.getLatestQuizAttempt(block.id)
+      .then((attempt: any) => {
+        if (attempt?.passed) {
+          setAlreadyPassed(true)
+          setScore(attempt.score)
+          setSubmitted(true)
+        }
+      })
+      .catch(() => { /* no previous attempt */ })
+  }, [block.id])
+
   // Countdown timer effect
   useEffect(() => {
     if (!quizStarted || submitted || timeRemaining === null) return
@@ -120,9 +138,7 @@ const QuizBlockDisplay: React.FC<QuizBlockDisplayProps> = ({ block }) => {
   // Auto-submit when time is up
   useEffect(() => {
     if (isTimeUp && !submitted) {
-      const finalScore = calculateScore()
-      setScore(finalScore)
-      setSubmitted(true)
+      submitToBackend()
       setIsTimeUp(false)
     }
   }, [isTimeUp])
@@ -163,10 +179,28 @@ const QuizBlockDisplay: React.FC<QuizBlockDisplayProps> = ({ block }) => {
     setQuizStarted(true)
   }
 
+  const submitToBackend = async () => {
+    setSubmitting(true)
+    try {
+      if (courseId) {
+        const result = await api.submitQuiz(block.id, courseId, answers)
+        setScore(result.score)
+        if (result.passed) setAlreadyPassed(true)
+      } else {
+        // Fallback: calculate locally if no courseId (e.g., preview mode)
+        setScore(calculateScore())
+      }
+    } catch (err) {
+      console.error('Error submitting quiz:', err)
+      setScore(calculateScore())
+    } finally {
+      setSubmitted(true)
+      setSubmitting(false)
+    }
+  }
+
   const handleSubmit = () => {
-    const finalScore = calculateScore()
-    setScore(finalScore)
-    setSubmitted(true)
+    submitToBackend()
   }
 
   const handleReset = () => {
@@ -471,17 +505,19 @@ const QuizBlockDisplay: React.FC<QuizBlockDisplayProps> = ({ block }) => {
         {quizStarted && !submitted && (
           <button
             onClick={handleSubmit}
+            disabled={submitting}
             style={{
               padding: '10px 20px',
               background: '#1976d2',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer',
+              cursor: submitting ? 'not-allowed' : 'pointer',
               fontWeight: 600,
+              opacity: submitting ? 0.7 : 1,
             }}
           >
-            Submit
+            {submitting ? 'Submitting...' : 'Submit'}
           </button>
         )}
       </div>

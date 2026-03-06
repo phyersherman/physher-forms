@@ -731,7 +731,7 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block, courseId }) => {
   if (block.type === 'quiz') {
     return (
       <div key={block.id} style={{ marginBottom: '20px' }}>
-        <QuizBlockDisplay block={block as any} />
+        <QuizBlockDisplay block={block as any} courseId={courseId} />
       </div>
     )
   }

@@ -444,11 +444,11 @@ export async function getCourseStructureWithProgress(courseId: string) {
   return fetchJson(`/courses/${courseId}/structure-with-progress`, { method: 'GET' })
 }
 
-export async function submitQuiz(blockId: string, answers: Record<string, any>) {
+export async function submitQuiz(blockId: string, courseId: string, answers: Record<string, any>) {
   return fetchJson('/quiz/submit', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ block_id: blockId, answers }),
+    body: JSON.stringify({ blockId, courseId, answers }),
   })
 }
 
