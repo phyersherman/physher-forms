@@ -597,9 +597,11 @@ const ModuleView: React.FC<ModuleViewProps> = ({
 
       <div style={{ marginBottom: '32px' }}>
         {module.blocks && module.blocks.length > 0 ? (
-          module.blocks.map((block) => (
-            <BlockRenderer key={block.id} block={block} courseId={courseId} />
-          ))
+          [...module.blocks]
+            .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+            .map((block) => (
+              <BlockRenderer key={block.id} block={block} courseId={courseId} />
+            ))
         ) : (
           <p style={{ color: '#999' }}>No content in this module</p>
         )}
@@ -713,14 +715,23 @@ const BlockRenderer: React.FC<BlockRendererProps> = ({ block, courseId }) => {
 
   if (block.type === 'video') {
     const config = block.config ? JSON.parse(block.config) : {}
+    let videoUrl = config.url || block.content || ''
+
+    // Convert YouTube watch URLs to embed URLs
+    const ytMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/)
+    if (ytMatch) {
+      videoUrl = `https://www.youtube.com/embed/${ytMatch[1]}`
+    }
+
     return (
       <div style={{ marginBottom: '20px' }}>
         <iframe
           width="100%"
           height="400"
-          src={config.url || block.content}
+          src={videoUrl}
           title="Embedded video"
           frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
           style={{ borderRadius: '8px' }}
         />

@@ -24,7 +24,7 @@ export const createChapter = async (data: {
 export const getChapterById = async (id: string) => {
   return prisma.chapter.findUnique({
     where: { id },
-    include: { modules: { include: { blocks: true } } },
+    include: { modules: { orderBy: { order_index: 'asc' }, include: { blocks: { orderBy: { order_index: 'asc' } } } } },
   })
 }
 

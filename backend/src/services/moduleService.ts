@@ -34,7 +34,7 @@ export const createModule = async (data: {
 export const getModuleById = async (id: string) => {
   return prisma.module.findUnique({
     where: { id },
-    include: { blocks: true },
+    include: { blocks: { orderBy: { order_index: 'asc' } } },
   })
 }
 

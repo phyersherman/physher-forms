@@ -73,7 +73,7 @@ const createCourse = async (data: { title: string; description?: string; tenant_
 const listGlobalCourses = async () => {
   return prisma.course.findMany({ 
     where: { tenant_id: null }, 
-    include: { chapters: { include: { modules: { include: { blocks: true } } } } } 
+    include: { chapters: { orderBy: { order_index: 'asc' }, include: { modules: { orderBy: { order_index: 'asc' }, include: { blocks: { orderBy: { order_index: 'asc' } } } } } } } 
   })
 }
 
@@ -83,7 +83,7 @@ const listGlobalCourses = async () => {
 const listByTenant = async (tenant_id: string) => {
   return prisma.course.findMany({ 
     where: { tenant_id }, 
-    include: { chapters: { include: { modules: { include: { blocks: true } } } } } 
+    include: { chapters: { orderBy: { order_index: 'asc' }, include: { modules: { orderBy: { order_index: 'asc' }, include: { blocks: { orderBy: { order_index: 'asc' } } } } } } } 
   })
 }
 
@@ -93,7 +93,7 @@ const listByTenant = async (tenant_id: string) => {
 const getById = async (id: string) => {
   return prisma.course.findUnique({ 
     where: { id }, 
-    include: { chapters: { include: { modules: { include: { blocks: true } } } } } 
+    include: { chapters: { orderBy: { order_index: 'asc' }, include: { modules: { orderBy: { order_index: 'asc' }, include: { blocks: { orderBy: { order_index: 'asc' } } } } } } } 
   })
 }
 
