@@ -195,26 +195,45 @@ const isModuleAccessible = async (
   const currentIndex = allModules.findIndex((m) => m.id === moduleId)
   const previousModule: ModuleWithBlocks | null = currentIndex > 0 ? allModules[currentIndex - 1] : null
 
-  // Check if PREVIOUS module requires quiz pass to continue to THIS module
-  if (previousModule && previousModule.requires_quiz_pass_to_continue) {
-    const quizBlock = previousModule.blocks.find((b) => b.type === 'quiz')
+  // First module is always accessible
+  if (previousModule) {
+    // Enforce sequential order: previous module must be completed
+    const prevCompletion = await prisma.moduleCompletion.findFirst({
+      where: {
+        moduleId: previousModule.id,
+        userId,
+        courseId,
+      },
+    })
 
-    if (quizBlock) {
-      const passedAttempt = await prisma.quizAttempt.findFirst({
-        where: {
-          blockId: quizBlock.id,
-          userId,
-          passed: true,
-        },
-        orderBy: {
-          submittedAt: 'desc',
-        },
-      })
+    if (!prevCompletion) {
+      return {
+        accessible: false,
+        reason: `Complete "${previousModule.title}" first.`,
+      }
+    }
 
-      if (!passedAttempt) {
-        return {
-          accessible: false,
-          reason: `You must pass the quiz in "${previousModule.title}" before accessing this module.`,
+    // Check if PREVIOUS module requires quiz pass to continue to THIS module
+    if (previousModule.requires_quiz_pass_to_continue) {
+      const quizBlock = previousModule.blocks.find((b) => b.type === 'quiz')
+
+      if (quizBlock) {
+        const passedAttempt = await prisma.quizAttempt.findFirst({
+          where: {
+            blockId: quizBlock.id,
+            userId,
+            passed: true,
+          },
+          orderBy: {
+            submittedAt: 'desc',
+          },
+        })
+
+        if (!passedAttempt) {
+          return {
+            accessible: false,
+            reason: `You must pass the quiz in "${previousModule.title}" before accessing this module.`,
+          }
         }
       }
     }

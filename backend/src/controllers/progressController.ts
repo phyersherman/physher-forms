@@ -34,7 +34,8 @@ export const completeModule = async (req: Request, res: Response) => {
     })
   } catch (error: any) {
     console.error('Error completing module:', error)
-    res.status(500).json({ error: error.message || 'Failed to complete module' })
+    const status = error.message?.includes('must pass') ? 400 : 500
+    res.status(status).json({ error: error.message || 'Failed to complete module' })
   }
 }
 

@@ -317,7 +317,7 @@ const CourseViewPage: React.FC = () => {
               course={course}
               progress={progress}
               onProgressUpdate={() => {
-                // Refresh progress
+                // Refresh progress and module access status
                 if (courseId && typeof courseId === 'string') {
                   api.getCourseProgress(courseId).then(progressData => {
                     setProgress({
@@ -328,6 +328,14 @@ const CourseViewPage: React.FC = () => {
                       certificateId: progressData.certificateId,
                     })
                   })
+                  // Refresh access status so sidebar locks update
+                  if (course) {
+                    for (const ch of course.chapters) {
+                      for (const mod of ch.modules) {
+                        checkModuleAccess(mod.id, courseId)
+                      }
+                    }
+                  }
                 }
               }}
             />
@@ -479,9 +487,11 @@ const ModuleView: React.FC<ModuleViewProps> = ({
   const [module, setModule] = useState<Module | null>(null)
   const [loading, setLoading] = useState(true)
   const [completing, setCompleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchModule = async () => {
+      setLoading(true)
       try {
         const data = await api.getModule(moduleId)
         setModule(data)
@@ -492,6 +502,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({
       }
     }
 
+    setError(null)
     fetchModule()
   }, [moduleId])
 
@@ -507,70 +518,41 @@ const ModuleView: React.FC<ModuleViewProps> = ({
   const nextChapter = allChaptersIndex < course.chapters.length - 1 ? course.chapters[allChaptersIndex + 1] : null
 
   const isModuleCompleted = progress.completedModules.includes(moduleId)
-  const isChapterCompleted = progress.completedChapters.includes(chapterId)
-  const allModulesInChapterCompleted =
-    chapter.modules.length > 0 && chapter.modules.every(m => progress.completedModules.includes(m.id))
 
-  const handleCompleteModule = async () => {
+  // Complete current module, then navigate forward
+  const handleNext = async () => {
+    setError(null)
     setCompleting(true)
     try {
-      const response = await api.completeModule(moduleId, courseId)
-      
-      // Update progress in parent
-      onProgressUpdate()
+      if (!isModuleCompleted) {
+        const response = await api.completeModule(moduleId, courseId)
+        onProgressUpdate()
 
-      // Handle automatic course completion (parent will show completion screen)
-      if (response.courseCompleted) {
-        // Parent component will detect courseCompleted=true and show UI
-        return
-      }
+        if (response.courseCompleted) return
 
-      // Handle automatic chapter completion and navigation to next chapter
-      if (response.chapterCompleted && response.nextChapter) {
-        // Navigate to the first module of the next chapter
-        const firstModuleOfNextChapter = response.nextChapter.modules?.[0]
-        if (firstModuleOfNextChapter) {
-          // Wait a moment to show completion UI before navigating
-          setTimeout(() => {
+        if (response.chapterCompleted && response.nextChapter) {
+          const firstMod = response.nextChapter.modules?.[0]
+          if (firstMod) {
             onChapterSelect(response.nextChapter.id)
-            onModuleSelect(firstModuleOfNextChapter.id)
-          }, 1500)
+            onModuleSelect(firstMod.id)
+          }
+          return
         }
-        return
       }
 
-      // Handle next module in same chapter
-      if (nextModule && !isLastModule) {
-        setTimeout(() => {
-          onModuleSelect(nextModule.id)
-        }, 1000)
+      // Navigate to next module in same chapter
+      if (nextModule) {
+        onModuleSelect(nextModule.id)
+      } else if (nextChapter) {
+        const firstMod = nextChapter.modules?.[0]
+        if (firstMod) {
+          onChapterSelect(nextChapter.id)
+          onModuleSelect(firstMod.id)
+        }
       }
-    } catch (err) {
-      console.error('Error completing module:', err)
-    } finally {
-      setCompleting(false)
-    }
-  }
-
-  const handleFinishChapter = async () => {
-    setCompleting(true)
-    try {
-      await api.completeChapter(chapterId, courseId)
-      onProgressUpdate()
-    } catch (err) {
-      console.error('Error finishing chapter:', err)
-    } finally {
-      setCompleting(false)
-    }
-  }
-
-  const handleFinishCourse = async () => {
-    setCompleting(true)
-    try {
-      await api.completeCourse(courseId)
-      onProgressUpdate()
-    } catch (err) {
-      console.error('Error finishing course:', err)
+    } catch (err: any) {
+      const msg = err?.payload?.error || err?.message || 'Cannot complete this module yet.'
+      setError(msg)
     } finally {
       setCompleting(false)
     }
@@ -620,9 +602,16 @@ const ModuleView: React.FC<ModuleViewProps> = ({
         )}
       </div>
 
-      {/* Navigation and Actions */}
+      {/* Error message */}
+      {error && (
+        <div style={{ padding: '10px 14px', background: '#fff3cd', color: '#856404', border: '1px solid #ffc107', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Navigation */}
       <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           {prevModule && (
             <button
               onClick={() => onModuleSelect(prevModule.id)}
@@ -637,13 +626,13 @@ const ModuleView: React.FC<ModuleViewProps> = ({
                 fontSize: '14px',
               }}
             >
-              ← Previous Module
+              ← Previous
             </button>
           )}
 
-          {!isModuleCompleted && (
+          {(nextModule || nextChapter) && (
             <button
-              onClick={handleCompleteModule}
+              onClick={handleNext}
               disabled={completing}
               style={{
                 padding: '10px 16px',
@@ -657,81 +646,30 @@ const ModuleView: React.FC<ModuleViewProps> = ({
                 opacity: completing ? 0.7 : 1,
               }}
             >
-              {completing ? 'Marking Complete...' : '✓ Mark Module Complete'}
+              {completing ? 'Completing...' : nextModule ? 'Next Module →' : 'Next Chapter →'}
             </button>
           )}
 
-          {nextModule && (
+          {!nextModule && !nextChapter && (
             <button
-              onClick={() => onModuleSelect(nextModule.id)}
+              onClick={handleNext}
+              disabled={completing || isModuleCompleted}
               style={{
                 padding: '10px 16px',
-                background: '#f0f4ff',
-                color: '#667eea',
-                border: '1px solid #667eea',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: 500,
-                fontSize: '14px',
-              }}
-            >
-              Next Module →
-            </button>
-          )}
-        </div>
-
-        {isLastModule && allModulesInChapterCompleted && !isChapterCompleted && (
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-            <button
-              onClick={handleFinishChapter}
-              disabled={completing}
-              style={{
-                padding: '10px 16px',
-                background: '#28a745',
-                color: 'white',
+                background: isModuleCompleted ? '#d4edda' : '#764ba2',
+                color: isModuleCompleted ? '#155724' : 'white',
                 border: 'none',
                 borderRadius: '6px',
-                cursor: completing ? 'not-allowed' : 'pointer',
-                fontWeight: 500,
+                cursor: completing || isModuleCompleted ? 'not-allowed' : 'pointer',
+                fontWeight: 600,
                 fontSize: '14px',
                 opacity: completing ? 0.7 : 1,
               }}
             >
-              {completing ? 'Finishing Chapter...' : '✓ Finish Chapter'}
+              {isModuleCompleted ? '✓ Course Complete' : completing ? 'Completing...' : '🎉 Finish Course'}
             </button>
-            <p style={{ margin: 0, fontSize: '13px', color: '#666', alignSelf: 'center' }}>
-              You've completed all modules in this chapter
-            </p>
-          </div>
-        )}
-
-        {allChaptersIndex === course.chapters.length - 1 &&
-          progress.completedChapters.length === course.chapters.length - 1 &&
-          isChapterCompleted &&
-          !progress.courseCompleted && (
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={handleFinishCourse}
-                disabled={completing}
-                style={{
-                  padding: '12px 20px',
-                  background: '#764ba2',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: completing ? 'not-allowed' : 'pointer',
-                  fontWeight: 600,
-                  fontSize: '14px',
-                  opacity: completing ? 0.7 : 1,
-                }}
-              >
-                {completing ? 'Completing Course...' : '🎉 Finish Course'}
-              </button>
-              <p style={{ margin: 0, fontSize: '13px', color: '#666', alignSelf: 'center' }}>
-                You've completed all chapters!
-              </p>
-            </div>
           )}
+        </div>
       </div>
     </div>
   )
