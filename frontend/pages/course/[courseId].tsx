@@ -650,23 +650,23 @@ const ModuleView: React.FC<ModuleViewProps> = ({
             </button>
           )}
 
-          {!nextModule && !nextChapter && (
+          {!nextModule && !nextChapter && !isModuleCompleted && (
             <button
               onClick={handleNext}
-              disabled={completing || isModuleCompleted}
+              disabled={completing}
               style={{
                 padding: '10px 16px',
-                background: isModuleCompleted ? '#d4edda' : '#764ba2',
-                color: isModuleCompleted ? '#155724' : 'white',
+                background: '#667eea',
+                color: 'white',
                 border: 'none',
                 borderRadius: '6px',
-                cursor: completing || isModuleCompleted ? 'not-allowed' : 'pointer',
-                fontWeight: 600,
+                cursor: completing ? 'not-allowed' : 'pointer',
+                fontWeight: 500,
                 fontSize: '14px',
                 opacity: completing ? 0.7 : 1,
               }}
             >
-              {isModuleCompleted ? '✓ Course Complete' : completing ? 'Completing...' : '🎉 Finish Course'}
+              {completing ? 'Completing...' : '✓ Complete Module'}
             </button>
           )}
         </div>
