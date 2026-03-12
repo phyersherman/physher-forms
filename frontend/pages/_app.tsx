@@ -11,9 +11,9 @@ export default function App({ Component, pageProps }: AppProps) {
       <AuthProvider>
         <ProtectedRoute>
           <Component {...pageProps} />
-          <footer style={{ textAlign: 'center', padding: '24px 16px', color: '#999', fontSize: '13px' }}>
+          <div style={{ position: 'fixed', bottom: 4, right: 8, color: '#ccc', fontSize: '11px', pointerEvents: 'none' }}>
             © 2026 Physher
-          </footer>
+          </div>
         </ProtectedRoute>
       </AuthProvider>
     </ThemeProvider>
