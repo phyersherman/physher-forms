@@ -9,7 +9,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import magicCodeService from '../services/magic-code-service';
-import passwordlessAccessService from '../services/passwordless-access-service';
 import authService from '../services/authService';
 
 const prisma = new PrismaClient();
@@ -19,20 +18,7 @@ const prisma = new PrismaClient();
  * GET /api/public/passwordless-links/validate?token={TOKEN}
  */
 export async function validatePasswordlessToken(req: Request, res: Response) {
-  try {
-    const { token } = req.query;
-
-    if (!token || typeof token !== 'string') {
-      return res.status(400).json({ error: 'Token is required' });
-    }
-
-    const linkInfo = await passwordlessAccessService.validatePasswordlessToken(token);
-
-    res.json(linkInfo);
-  } catch (error: any) {
-    console.error('[Passwordless Auth] Validate token error:', error);
-    res.status(400).json({ error: error.message || 'Invalid token' });
-  }
+  return res.status(410).json({ error: 'Passwordless access links are not available in PhysherForms' });
 }
 
 /**
@@ -41,44 +27,7 @@ export async function validatePasswordlessToken(req: Request, res: Response) {
  * Body: { token, fullName, email, organization? }
  */
 export async function registerViaPasswordlessLink(req: Request, res: Response) {
-  try {
-    const { token, fullName, email, organization } = req.body;
-
-    // Validate required fields
-    if (!token) return res.status(400).json({ error: 'Token is required' });
-    if (!fullName) return res.status(400).json({ error: 'Full name is required' });
-    if (!email) return res.status(400).json({ error: 'Email is required' });
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'Invalid email format' });
-    }
-
-    const ipAddress = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress;
-
-    // Register the user
-    const result = await passwordlessAccessService.registerViaPasswordlessLink(
-      { token, fullName, email, organization },
-      ipAddress
-    );
-
-    // Generate magic code for immediate login - email will be sent automatically
-    await magicCodeService.generateMagicCode(result.user.id, result.user.tenantId || undefined);
-
-    res.json({
-      message: 'Registration successful! Check your email for the login code.',
-      user: {
-        id: result.user.id,
-        email: result.user.email,
-        fullName: result.user.fullName,
-      },
-      enrolledCourses: result.courses,
-    });
-  } catch (error: any) {
-    console.error('[Passwordless Auth] Registration error:', error);
-    res.status(400).json({ error: error.message || 'Registration failed' });
-  }
+  return res.status(410).json({ error: 'Passwordless access links are not available in PhysherForms' });
 }
 
 /**

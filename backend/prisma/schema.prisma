@@ -9,27 +9,20 @@ datasource db {
 }
 
 model Tenant {
-  id                      String                   @id @default(cuid())
-  name                    String
-  defaultLocale           String
-  primaryColor            String?
-  secondaryColor          String?
-  logoUrl                 String?
-  certificateSignature    String?                  // Name to display on certificate signature line
-  is_template             Boolean                  @default(false)
-  createdAt               DateTime                 @default(now())
-  domains                 Domain[]
-  users                   User[]
-  courses                 Course[]
-  chapters                Chapter[]
-  modules                 Module[]
-  blocks                  Block[]
-  quizWidgets             QuizWidget[]
-  emailConfigs            EmailConfig[]
-  enrollments             Enrollment[]
-  certificates            Certificate[]
-  registrationLinks       RegistrationLink[]
-  passwordlessAccessLinks PasswordlessAccessLink[]
+  id                   String              @id @default(cuid())
+  name                 String
+  defaultLocale        String
+  primaryColor         String?
+  secondaryColor       String?
+  logoUrl              String?
+  allowedDomains       String[]            @default([]) // email domains allowed for respondent login
+  is_template          Boolean             @default(false)
+  createdAt            DateTime            @default(now())
+  domains              Domain[]
+  users                User[]
+  emailConfigs         EmailConfig[]
+  forms                Form[]
+  verificationCodes    VerificationCode[]
 }
 
 model Domain {
@@ -59,247 +52,13 @@ model User {
   updatedAt                DateTime                  @updatedAt
   tenant                   Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   refreshTokens            RefreshToken[]
-  enrollments              Enrollment[]
-  certificates             Certificate[]
-  quizAttempts             QuizAttempt[]
-  moduleCompletions        ModuleCompletion[]
-  chapterCompletions       ChapterCompletion[]
   magicCodes               MagicCode[]
   bulkImports              BulkImportJob[]
-  registrationLinkUsages   RegistrationLinkUsage[]
-  passwordlessAccessUsages PasswordlessAccessUsage[]
 
   @@unique([email, tenantId])
 }
 
-model Course {
-  id               String    @id @default(cuid())
-  title            String
-  description      String?
-  tenant_id        String? // null = global course, set = tenant-specific course
-  tenant           Tenant?   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  global_course_id String? // reference to the global course this was copied from
-  globalCourse     Course?   @relation("CourseToGlobalCourse", fields: [global_course_id], references: [id])
-  copiedCourses    Course[]  @relation("CourseToGlobalCourse") // courses copied from this global course
-  chapters         Chapter[]
-  // Audit
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
-}
-
-model Chapter {
-  id                       String   @id @default(cuid())
-  course_id                String
-  course                   Course   @relation(fields: [course_id], references: [id])
-  title                    String
-  order_index              Int      @default(0)
-  modules                  Module[]
-  tenant_id                String? // null = global, set = tenant-specific
-  tenant                   Tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  // Assessment settings
-  assessment_title         String?
-  assessment_required      Boolean  @default(false)
-  prerequisite_chapter_ids String[] // JSON array of chapter IDs
-  // Audit
-  created_at               DateTime @default(now())
-  updated_at               DateTime @updatedAt
-}
-
-model CourseTemplate {
-  id          String           @id @default(cuid())
-  title       String
-  description String?
-  modules     TemplateModule[]
-}
-
-model TemplateModule {
-  id          String                @id @default(cuid())
-  template_id String
-  template    CourseTemplate        @relation(fields: [template_id], references: [id], onDelete: Cascade)
-  title       String
-  slug        String?
-  summary     String?
-  order_index Int                   @default(0)
-  blocks      TemplateModuleBlock[]
-  created_at  DateTime              @default(now())
-  updated_at  DateTime              @updatedAt
-}
-
-model TemplateModuleBlock {
-  id                 String         @id @default(cuid())
-  template_module_id String
-  template_module    TemplateModule @relation(fields: [template_module_id], references: [id], onDelete: Cascade)
-  type               String // e.g., "text", "image", "video", "quiz", "assignment"
-  content            String? // HTML/markdown for text, URL for media, etc.
-  config             String? // JSON for quiz/assignment config
-  order_index        Int            @default(0)
-  created_at         DateTime       @default(now())
-  updated_at         DateTime       @updatedAt
-}
-model Module {
-  id                             String   @id @default(cuid())
-  chapter_id                     String
-  chapter                        Chapter  @relation(fields: [chapter_id], references: [id])
-  title                          String
-  slug                           String?
-  summary                        String?
-  order_index                    Int      @default(0)
-  blocks                         Block[]
-  // Gating settings
-  required                       Boolean  @default(true)
-  prerequisite_module_ids        String[] // JSON array of module IDs
-  requires_quiz_pass_to_continue Boolean  @default(false)
-  // Other existing fields (content_type, etc.) can be moved to blocks
-  tenant_id                      String? // null = global, set = tenant-specific
-  tenant                         Tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  // Audit
-  created_at                     DateTime @default(now())
-  updated_at                     DateTime @updatedAt
-}
-
-model Block {
-  id          String   @id @default(cuid())
-  module_id   String
-  module      Module   @relation(fields: [module_id], references: [id], onDelete: Cascade)
-  type        String // e.g., "text", "image", "video", "quiz", "assignment"
-  content     String? // HTML/markdown for text, URL for media, etc.
-  config      String? // JSON for quiz/assignment config
-  order_index Int      @default(0)
-  tenant_id   String? // null = global, set = tenant-specific
-  tenant      Tenant?  @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  // Audit
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-}
-
-// New model for quiz/assignment widgets (reusable across blocks)
-model QuizWidget {
-  id               String   @id @default(cuid())
-  title            String
-  type             String // "quiz" or "assignment"
-  questions        String // JSON array of questions
-  passing_score    Float?
-  attempts_allowed Int      @default(1)
-  feedback_options String? // JSON for feedback settings
-  tenant_id        String
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-  // Relations: Blocks can reference this via config
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-}
-
-model Enrollment {
-  id            String       @id @default(cuid())
-  tenantId      String
-  courseId      String
-  userId        String
-  enrolledAt    DateTime     @default(now())
-  completedAt   DateTime?
-  certificateId String?
-  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  certificate   Certificate? @relation(fields: [certificateId], references: [id])
-
-  @@unique([tenantId, courseId, userId])
-  @@index([userId])
-  @@index([courseId])
-}
-
-model QuizAttempt {
-  id          String   @id @default(cuid())
-  blockId     String // Which quiz block was attempted
-  userId      String
-  tenantId    String
-  courseId    String
-  score       Float // Score as percentage (0-100)
-  passed      Boolean // Whether score >= passing_score
-  answers     String // JSON: { questionId: answer }
-  submittedAt DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([blockId])
-}
-
-model ModuleCompletion {
-  id          String   @id @default(cuid())
-  moduleId    String
-  userId      String
-  tenantId    String
-  courseId    String
-  completedAt DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([moduleId])
-}
-
-model ChapterCompletion {
-  id          String   @id @default(cuid())
-  chapterId   String
-  userId      String
-  tenantId    String
-  courseId    String
-  completedAt DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([chapterId])
-}
-
-// Feature 2: Certificate Generation
-model Certificate {
-  id                String       @id @default(cuid())
-  tenantId          String
-  userId            String
-  courseId          String
-  certificateNumber String       @unique
-  issuedAt          DateTime     @default(now())
-  pdfPath           String?
-  tenant            Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  enrollments       Enrollment[]
-
-  @@index([userId])
-  @@index([courseId])
-  @@index([tenantId])
-}
-
-// Feature 3: Registration Links
-model RegistrationLink {
-  id        String                  @id @default(cuid())
-  tenantId  String
-  courseIds String[] // Array of course IDs (JSON array)
-  token     String                  @unique
-  name      String
-  maxUses   Int?
-  usedCount Int                     @default(0)
-  expiresAt DateTime?
-  createdBy String
-  createdAt DateTime                @default(now())
-  isActive  Boolean                 @default(true)
-  tenant    Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  usages    RegistrationLinkUsage[]
-
-  @@index([token])
-  @@index([tenantId])
-}
-
-model RegistrationLinkUsage {
-  id                 String           @id @default(cuid())
-  registrationLinkId String
-  userId             String
-  ipAddress          String?
-  usedAt             DateTime         @default(now())
-  registrationLink   RegistrationLink @relation(fields: [registrationLinkId], references: [id], onDelete: Cascade)
-  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([registrationLinkId, userId])
-  @@index([registrationLinkId])
-  @@index([userId])
-}
-
-// Feature 4: Bulk User Management
+// Bulk User Management
 model BulkImportJob {
   id           String    @id @default(cuid())
   tenantId     String
@@ -317,41 +76,6 @@ model BulkImportJob {
 
   @@index([tenantId])
   @@index([importedBy])
-}
-
-// Feature 5: Passwordless Authentication
-model PasswordlessAccessLink {
-  id           String                    @id @default(cuid())
-  tenantId     String
-  courseIds    String[] // Multiple course IDs (JSON array)
-  token        String                    @unique
-  name         String
-  organization String?
-  maxUses      Int?
-  usedCount    Int                       @default(0)
-  expiresAt    DateTime?
-  createdBy    String
-  createdAt    DateTime                  @default(now())
-  isActive     Boolean                   @default(true)
-  tenant       Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  usages       PasswordlessAccessUsage[]
-
-  @@index([token])
-  @@index([tenantId])
-}
-
-model PasswordlessAccessUsage {
-  id                       String                 @id @default(cuid())
-  passwordlessAccessLinkId String
-  userId                   String
-  usedAt                   DateTime               @default(now())
-  ipAddress                String?
-  link                     PasswordlessAccessLink @relation(fields: [passwordlessAccessLinkId], references: [id], onDelete: Cascade)
-  user                     User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([passwordlessAccessLinkId, userId])
-  @@index([passwordlessAccessLinkId])
-  @@index([userId])
 }
 
 model MagicCode {
@@ -385,7 +109,7 @@ model EmailConfig {
   apiKey       String // encrypted at rest
   domain       String // mailgun sending domain
   fromEmail    String // noreply@example.com
-  fromName     String // "Acme LMS"
+  fromName     String // "PhysherForms"
   replyToEmail String?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -398,9 +122,58 @@ model EmailLog {
   tenantId       String?
   recipientEmail String
   subject        String
-  templateName   String // "invite", "welcome", "reset"
+  templateName   String
   status         String   @default("sent") // "sent" | "failed" | "bounced"
   providerMsgId  String? // mailgun message ID
   errorMessage   String?
   sentAt         DateTime @default(now())
 }
+
+// PhysherForms: Form management
+model Form {
+  id              String           @id @default(cuid())
+  tenantId        String
+  name            String
+  description     String?
+  jotformEmbedUrl String
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  completions     FormCompletion[]
+
+  @@index([tenantId])
+}
+
+// PhysherForms: Tracks which respondents completed which forms
+// emailHash = SHA-256 of respondent email (never store plaintext email here)
+// displayHint = masked email computed at write time, e.g. "t***@example.com"
+model FormCompletion {
+  id          String   @id @default(cuid())
+  emailHash   String   // SHA-256 hash of respondent email
+  displayHint String   // masked email for admin display, e.g. "t***@example.com"
+  formId      String
+  completedAt DateTime @default(now())
+  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@unique([emailHash, formId])
+  @@index([formId])
+  @@index([emailHash])
+}
+
+// PhysherForms: Temporary 6-digit OTP codes for respondent email verification
+// Stored only for the 10-minute TTL; cleaned up by cron job
+model VerificationCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  tenantId  String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([email, tenantId])
+  @@index([expiresAt])
+}
+

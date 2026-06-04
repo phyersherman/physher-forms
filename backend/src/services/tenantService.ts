@@ -64,7 +64,7 @@ const create = async (data: { name: string; defaultLocale?: string; theme?: any;
   return tenant as unknown as Tenant
 }
 
-const update = async (id: string, data: { name?: string; defaultLocale?: string; theme?: any; domains?: { host: string; isPrimary?: boolean }[]; certificateSignature?: string | null }) => {
+const update = async (id: string, data: { name?: string; defaultLocale?: string; theme?: any; domains?: { host: string; isPrimary?: boolean }[]; allowedDomains?: string[] }) => {
   if (!process.env.DATABASE_URL) {
     const tenant = _tenants.find(t => t.id === id)
     if (!tenant) return undefined
@@ -82,7 +82,7 @@ const update = async (id: string, data: { name?: string; defaultLocale?: string;
       primaryColor: data.theme?.primaryColor,
       secondaryColor: data.theme?.secondaryColor,
       logoUrl: data.theme?.logoUrl,
-      certificateSignature: data.certificateSignature
+      ...(data.allowedDomains !== undefined && { allowedDomains: data.allowedDomains }),
     },
     include: { domains: true }
   })

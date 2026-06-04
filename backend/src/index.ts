@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser'
 import routes from './routes'
 import { tenantResolver } from './middleware/tenantResolver'
 import csurf from 'csurf'
+import { cleanupExpiredCodes } from './services/respondentAuthService'
 
 const app = express()
 
@@ -44,8 +45,9 @@ app.get('/api/csrf-token', csrfMiddleware, (req, res) => {
 app.use((req, res, next) => {
   const isAuthPath = req.path.startsWith('/api/auth')
   const isPublicPath = req.path.startsWith('/api/public/')
+  const isRespondentAuth = req.path.startsWith('/api/respondent/send-code') || req.path.startsWith('/api/respondent/verify-code') || req.path.startsWith('/api/respondent/logout')
   const isSafeMethod = req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS'
-  if (isSafeMethod || isAuthPath || isPublicPath) return next()
+  if (isSafeMethod || isAuthPath || isPublicPath || isRespondentAuth) return next()
   return csrfMiddleware(req as any, res as any, next as any)
 })
 
@@ -59,5 +61,15 @@ app.use('/api', routes)
 
 const PORT = process.env.PORT || 4000
 app.listen(PORT, () => {
-  console.log(`LMS backend listening on port ${PORT}`)
+  console.log(`PhysherForms backend listening on port ${PORT}`)
 })
+
+// Cleanup cron: delete expired/used VerificationCode records every 15 minutes
+setInterval(async () => {
+  try {
+    const deleted = await cleanupExpiredCodes()
+    if (deleted > 0) console.log(`[Cron] Cleaned up ${deleted} expired verification codes`)
+  } catch (e) {
+    console.error('[Cron] Verification code cleanup failed:', e)
+  }
+}, 15 * 60 * 1000)

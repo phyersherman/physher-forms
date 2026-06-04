@@ -26,7 +26,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
       {/* Sidebar */}
       <aside className={`${styles.sidebar} ${sidebarOpen ? styles.open : styles.closed}`}>
         <div className={styles.sidebarHeader}>
-          <h2 className={styles.logo}>LMS Admin</h2>
+          <h2 className={styles.logo}>PhysherForms</h2>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className={styles.toggleButton}
@@ -37,9 +37,19 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
         </div>
 
         <nav className={styles.nav}>
-          <Link href="/admin" className={`${styles.navItem} ${isActive('/admin') && !router.pathname.includes('/courses') && !router.pathname.includes('/tenants') && !router.pathname.includes('/users') && !router.pathname.includes('/email') ? styles.active : ''}`}>
+          <Link href="/admin" className={`${styles.navItem} ${isActive('/admin') && !router.pathname.includes('/forms') && !router.pathname.includes('/completions') && !router.pathname.includes('/tenants') && !router.pathname.includes('/users') && !router.pathname.includes('/email') ? styles.active : ''}`}>
             <span className={styles.icon}>📊</span>
             <span className={styles.label}>Dashboard</span>
+          </Link>
+
+          <Link href="/admin/forms" className={`${styles.navItem} ${isActive('/admin/forms') ? styles.active : ''}`}>
+            <span className={styles.icon}>📋</span>
+            <span className={styles.label}>Forms</span>
+          </Link>
+
+          <Link href="/admin/completions" className={`${styles.navItem} ${isActive('/admin/completions') ? styles.active : ''}`}>
+            <span className={styles.icon}>✅</span>
+            <span className={styles.label}>Completions</span>
           </Link>
 
           <Link href="/admin/tenants" className={`${styles.navItem} ${isActive('/admin/tenants') ? styles.active : ''}`}>
