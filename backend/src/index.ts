@@ -45,7 +45,7 @@ app.get('/api/csrf-token', csrfMiddleware, (req, res) => {
 app.use((req, res, next) => {
   const isAuthPath = req.path.startsWith('/api/auth')
   const isPublicPath = req.path.startsWith('/api/public/')
-  const isRespondentAuth = req.path.startsWith('/api/respondent/send-code') || req.path.startsWith('/api/respondent/verify-code') || req.path.startsWith('/api/respondent/logout')
+  const isRespondentAuth = req.path.startsWith('/api/respondent/')
   const isSafeMethod = req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS'
   if (isSafeMethod || isAuthPath || isPublicPath || isRespondentAuth) return next()
   return csrfMiddleware(req as any, res as any, next as any)

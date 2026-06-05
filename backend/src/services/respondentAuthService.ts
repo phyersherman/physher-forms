@@ -117,6 +117,26 @@ export async function sendVerificationCode(
     select: { name: true },
   })
 
+  // In development without a working email config, log the code to console
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      await sendEmail({
+        to: normalizedEmail,
+        subject: `Your verification code for ${tenant?.name || 'PhysherForms'}`,
+        templateName: 'verification-code',
+        variables: {
+          code,
+          organizationName: tenant?.name || 'PhysherForms',
+          expiryMinutes: '10',
+        },
+        tenantId,
+      })
+    } catch (emailErr) {
+      console.warn('[DEV] Email send failed — verification code for console use:', code)
+    }
+    return
+  }
+
   await sendEmail({
     to: normalizedEmail,
     subject: `Your verification code for ${tenant?.name || 'PhysherForms'}`,
