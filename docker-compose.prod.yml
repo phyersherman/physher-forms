@@ -4,7 +4,7 @@ services:
   # Traefik reverse proxy with automatic SSL
   traefik:
     image: traefik:latest
-    container_name: lms-traefik
+    container_name: physherforms-traefik
     restart: unless-stopped
     command:
       - "--api.dashboard=true"
@@ -33,38 +33,36 @@ services:
       - "traefik.http.routers.traefik.middlewares=traefik-auth"
       - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_AUTH}"
     networks:
-      - lms-network
+      - physherforms-network
 
   # PostgreSQL database
   postgres:
     image: postgres:15-alpine
-    container_name: lms-postgres
+    container_name: physherforms-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-lms_prod}
-      POSTGRES_USER: ${POSTGRES_USER:-lms}
+      POSTGRES_DB: ${POSTGRES_DB:-physherforms_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-physherforms}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lms}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-physherforms}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - lms-network
+      - physherforms-network
 
   # Backend API
   backend:
     image: ghcr.io/${GITHUB_ORG}/${GITHUB_REPO}/backend:${IMAGE_TAG:-latest}
-    container_name: lms-backend
+    container_name: physherforms-backend
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-lms}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-lms_prod}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-physherforms}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-physherforms_prod}?schema=public
       JWT_SECRET: ${JWT_SECRET}
-      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
-      CSRF_SECRET: ${CSRF_SECRET}
       ENCRYPTION_SECRET: ${ENCRYPTION_SECRET}
       PORT: 4000
       FRONTEND_URL: https://${BASE_DOMAIN}
@@ -73,9 +71,6 @@ services:
       MAILGUN_API_KEY: ${MAILGUN_API_KEY}
       MAILGUN_DOMAIN: ${MAILGUN_DOMAIN}
       MAILGUN_FROM_EMAIL: ${MAILGUN_FROM_EMAIL:-noreply@${MAILGUN_DOMAIN}}
-    volumes:
-      - backend-certificates:/app/certificates
-      - backend-fonts:/app/fonts
     depends_on:
       postgres:
         condition: service_healthy
@@ -99,12 +94,12 @@ services:
       - "traefik.http.services.backend.loadbalancer.server.port=4000"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     networks:
-      - lms-network
+      - physherforms-network
 
   # Frontend Next.js app
   frontend:
     image: ghcr.io/${GITHUB_ORG}/${GITHUB_REPO}/frontend:${IMAGE_TAG:-latest}
-    container_name: lms-frontend
+    container_name: physherforms-frontend
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -130,18 +125,14 @@ services:
       - "traefik.http.routers.frontend.service=frontend"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
     networks:
-      - lms-network
+      - physherforms-network
 
 volumes:
   postgres-data:
     driver: local
   traefik-certificates:
     driver: local
-  backend-certificates:
-    driver: local
-  backend-fonts:
-    driver: local
 
 networks:
-  lms-network:
+  physherforms-network:
     driver: bridge

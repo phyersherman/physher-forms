@@ -2,7 +2,7 @@
 set -e
 
 #####################################################################
-# LMS Deployment Script
+# PhysherForms Deployment Script
 # Performs zero-downtime updates with health checks and rollback
 #####################################################################
 
@@ -90,7 +90,7 @@ $COMPOSE_CMD up -d traefik postgres
 info "Waiting for database to be ready..."
 sleep 10
 for i in $(seq 1 30); do
-    if $COMPOSE_CMD exec -T postgres pg_isready -U lms 2>/dev/null | grep -q "accepting connections"; then
+    if $COMPOSE_CMD exec -T postgres pg_isready -U physherforms 2>/dev/null | grep -q "accepting connections"; then
         info "Database is ready"
         break
     fi
@@ -132,8 +132,8 @@ $COMPOSE_CMD exec -T backend npm run migrate:deploy 2>/dev/null || {
 }
 
 # Store current container IDs for rollback
-OLD_BACKEND=$(docker ps -q -f name=lms-backend 2>/dev/null || echo "")
-OLD_FRONTEND=$(docker ps -q -f name=lms-frontend 2>/dev/null || echo "")
+OLD_BACKEND=$(docker ps -q -f name=physherforms-backend 2>/dev/null || echo "")
+OLD_FRONTEND=$(docker ps -q -f name=physherforms-frontend 2>/dev/null || echo "")
 
 info "Starting updated services..."
 
@@ -141,7 +141,7 @@ info "Starting updated services..."
 $COMPOSE_CMD up -d backend
 
 # Wait for backend to be healthy
-if ! check_health "backend" "lms-backend"; then
+if ! check_health "backend" "physherforms-backend"; then
     error "Backend deployment failed health check!"
     
     if [ -n "$OLD_BACKEND" ]; then
@@ -156,7 +156,7 @@ fi
 $COMPOSE_CMD up -d frontend
 
 # Wait for frontend to be healthy
-if ! check_health "frontend" "lms-frontend"; then
+if ! check_health "frontend" "physherforms-frontend"; then
     error "Frontend deployment failed health check!"
     
     if [ -n "$OLD_FRONTEND" ]; then
