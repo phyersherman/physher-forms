@@ -107,7 +107,7 @@ const AdminFormsPage: React.FC = () => {
         await api.updateAdminForm(id, {
           tenantId,
           name: body.name,
-          description: body.description,
+          description: body.description ?? undefined,
           jotformEmbedUrl: body.jotformEmbedUrl,
           isActive: body.isActive,
         })
@@ -115,7 +115,7 @@ const AdminFormsPage: React.FC = () => {
         await api.createAdminForm({
           tenantId,
           name: body.name || '',
-          description: body.description,
+          description: body.description ?? undefined,
           jotformEmbedUrl: body.jotformEmbedUrl || '',
           isActive: body.isActive,
         })
