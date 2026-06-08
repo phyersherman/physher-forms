@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 ENV_FILE=".env.production"
 COMPOSE_FILE="docker-compose.prod.yml"
 COMPOSE_CMD="docker compose --env-file ${ENV_FILE} -f ${COMPOSE_FILE}"
-HEALTH_CHECK_RETRIES=30
+HEALTH_CHECK_RETRIES=90
 HEALTH_CHECK_INTERVAL=2
 
 # Function to print colored messages
@@ -40,7 +40,10 @@ check_health() {
     info "Checking health of $service..."
     
     for i in $(seq 1 $HEALTH_CHECK_RETRIES); do
-        if docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null | grep -q "healthy"; then
+        local status
+        status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_name" 2>/dev/null || true)
+
+        if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
             info "$service is healthy"
             return 0
         fi
@@ -52,6 +55,7 @@ check_health() {
     done
     
     error "$service failed health check after $((HEALTH_CHECK_RETRIES * HEALTH_CHECK_INTERVAL)) seconds"
+    docker logs --tail 120 "$container_name" 2>/dev/null || true
     return 1
 }
 
@@ -146,7 +150,11 @@ if ! check_health "backend" "physherforms-backend"; then
     
     if [ -n "$OLD_BACKEND" ]; then
         warn "Rolling back backend..."
-        docker start "$OLD_BACKEND" || true
+        if docker ps -a -q --no-trunc | grep -q "$OLD_BACKEND"; then
+            docker start "$OLD_BACKEND" || true
+        else
+            warn "Previous backend container no longer exists; skipping rollback"
+        fi
     fi
     
     exit 1
@@ -161,7 +169,11 @@ if ! check_health "frontend" "physherforms-frontend"; then
     
     if [ -n "$OLD_FRONTEND" ]; then
         warn "Rolling back frontend..."
-        docker start "$OLD_FRONTEND" || true
+        if docker ps -a -q --no-trunc | grep -q "$OLD_FRONTEND"; then
+            docker start "$OLD_FRONTEND" || true
+        else
+            warn "Previous frontend container no longer exists; skipping rollback"
+        fi
     fi
     
     exit 1
