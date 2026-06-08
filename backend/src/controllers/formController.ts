@@ -13,6 +13,7 @@
 
 import { Request, Response } from 'express'
 import * as formService from '../services/formService'
+import prisma from '../db/client'
 
 function resolveTenantId(req: Request): string | undefined {
   const tenantFromUser = req.user?.tenantId
@@ -33,10 +34,33 @@ function resolveTenantId(req: Request): string | undefined {
   return tenantFromQuery || tenantFromBody || tenantFromParams
 }
 
+async function resolveTenantIdForForms(req: Request): Promise<string> {
+  const explicitTenantId = resolveTenantId(req)
+  if (explicitTenantId) return explicitTenantId
+
+  // Global admin convenience: if tenant is not specified, use first tenant.
+  const existingTenant = await prisma.tenant.findFirst({
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  })
+
+  if (existingTenant) return existingTenant.id
+
+  // Bootstrap a default tenant for global-only setups.
+  const createdTenant = await prisma.tenant.create({
+    data: {
+      name: 'Default Organization',
+      defaultLocale: 'en',
+    },
+    select: { id: true },
+  })
+
+  return createdTenant.id
+}
+
 export async function listForms(req: Request, res: Response) {
   try {
-    const tenantId = resolveTenantId(req)
-    if (!tenantId) return res.status(400).json({ error: 'Tenant required' })
+    const tenantId = await resolveTenantIdForForms(req)
 
     const forms = await formService.listForms(tenantId)
     return res.json(forms)
@@ -48,8 +72,7 @@ export async function listForms(req: Request, res: Response) {
 
 export async function createForm(req: Request, res: Response) {
   try {
-    const tenantId = resolveTenantId(req)
-    if (!tenantId) return res.status(400).json({ error: 'Tenant required' })
+    const tenantId = await resolveTenantIdForForms(req)
 
     const { name, description, jotformEmbedUrl, isActive } = req.body
     if (!name) return res.status(400).json({ error: 'name is required' })
@@ -71,8 +94,7 @@ export async function createForm(req: Request, res: Response) {
 
 export async function getForm(req: Request, res: Response) {
   try {
-    const tenantId = resolveTenantId(req)
-    if (!tenantId) return res.status(400).json({ error: 'Tenant required' })
+    const tenantId = await resolveTenantIdForForms(req)
 
     const form = await formService.getForm(req.params.id as string, tenantId)
     if (!form) return res.status(404).json({ error: 'Form not found' })
@@ -85,8 +107,7 @@ export async function getForm(req: Request, res: Response) {
 
 export async function updateForm(req: Request, res: Response) {
   try {
-    const tenantId = resolveTenantId(req)
-    if (!tenantId) return res.status(400).json({ error: 'Tenant required' })
+    const tenantId = await resolveTenantIdForForms(req)
 
     const { name, description, jotformEmbedUrl, isActive } = req.body
     const form = await formService.updateForm(req.params.id as string, tenantId, {
@@ -104,8 +125,7 @@ export async function updateForm(req: Request, res: Response) {
 
 export async function deleteForm(req: Request, res: Response) {
   try {
-    const tenantId = resolveTenantId(req)
-    if (!tenantId) return res.status(400).json({ error: 'Tenant required' })
+    const tenantId = await resolveTenantIdForForms(req)
 
     await formService.deleteForm(req.params.id as string, tenantId)
     return res.status(204).send()

@@ -69,13 +69,7 @@ const AdminFormsPage: React.FC = () => {
   const loadForms = async () => {
     try {
       setLoading(true)
-      if (!tenantId) {
-        setForms([])
-        setError('Tenant context is required to manage forms.')
-        return
-      }
-
-      const data = await api.getAdminForms(tenantId)
+      const data = await api.getAdminForms(tenantId || undefined)
       setForms(data)
       setError(null)
     } catch (e: any) {
@@ -101,11 +95,10 @@ const AdminFormsPage: React.FC = () => {
     setSaveError(null)
     try {
       const { id, ...body } = modal.form
-      if (!tenantId) throw new Error('Tenant context is required to save forms')
 
       if (modal.isEdit && id) {
         await api.updateAdminForm(id, {
-          tenantId,
+          tenantId: tenantId || undefined,
           name: body.name,
           description: body.description ?? undefined,
           jotformEmbedUrl: body.jotformEmbedUrl,
@@ -113,7 +106,7 @@ const AdminFormsPage: React.FC = () => {
         })
       } else {
         await api.createAdminForm({
-          tenantId,
+          tenantId: tenantId || undefined,
           name: body.name || '',
           description: body.description ?? undefined,
           jotformEmbedUrl: body.jotformEmbedUrl || '',
@@ -133,7 +126,7 @@ const AdminFormsPage: React.FC = () => {
   const toggleActive = async (form: Form) => {
     try {
       await api.updateAdminForm(form.id, {
-        tenantId,
+        tenantId: tenantId || undefined,
         isActive: !form.isActive,
       })
       await loadForms()
@@ -145,7 +138,7 @@ const AdminFormsPage: React.FC = () => {
   const handleDelete = async (form: Form) => {
     if (!confirm(`Delete "${form.name}"? This cannot be undone.`)) return
     try {
-      await api.deleteAdminForm(form.id, tenantId)
+      await api.deleteAdminForm(form.id, tenantId || undefined)
       await loadForms()
     } catch (e: any) {
       setError(e.message || 'Failed to delete form')
