@@ -26,7 +26,7 @@ const Header: React.FC = () => {
             <>
               {user.role === 'admin' && (
                 <nav style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <Link href="/admin/tenants">Tenants</Link>
+                  <Link href="/admin/domains">Domains</Link>
                   <Link href="/admin/course-templates">Templates</Link>
                 </nav>
               )}

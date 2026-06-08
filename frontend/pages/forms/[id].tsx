@@ -19,6 +19,14 @@ interface FormData {
   jotformEmbedUrl: string
 }
 
+const extractIframeSrc = (embed: string): string | null => {
+  const trimmed = embed.trim()
+  if (!trimmed.startsWith('<')) return trimmed
+
+  const srcMatch = trimmed.match(/<iframe[^>]*\ssrc=["']([^"']+)["']/i)
+  return srcMatch?.[1] || null
+}
+
 const FormViewPage: React.FC = () => {
   const router = useRouter()
   const { id } = router.query
@@ -126,6 +134,9 @@ const FormViewPage: React.FC = () => {
 
   if (!form) return null
 
+  const iframeSrc = extractIframeSrc(form.jotformEmbedUrl)
+  const iframeSrcDoc = iframeSrc ? undefined : form.jotformEmbedUrl
+
   return (
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f9fafb' }}>
       {/* Header */}
@@ -173,7 +184,8 @@ const FormViewPage: React.FC = () => {
       {/* JotForm iframe — responsive, fills remaining height */}
       <div style={{ flex: 1, position: 'relative' }}>
         <iframe
-          src={form.jotformEmbedUrl}
+          src={iframeSrc || undefined}
+          srcDoc={iframeSrcDoc}
           title={form.name}
           style={{
             width: '100%',

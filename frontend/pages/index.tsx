@@ -7,6 +7,8 @@ type Stage = 'email' | 'code'
 
 const RespondentLoginPage: React.FC = () => {
   const router = useRouter()
+  const tenantIdFromQuery =
+    typeof router.query.tenantId === 'string' ? router.query.tenantId : undefined
   const [stage, setStage] = useState<Stage>('email')
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
@@ -23,7 +25,7 @@ const RespondentLoginPage: React.FC = () => {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, tenantId: tenantIdFromQuery }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to send code')
@@ -44,7 +46,7 @@ const RespondentLoginPage: React.FC = () => {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, tenantId: tenantIdFromQuery }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to resend code')
@@ -65,7 +67,7 @@ const RespondentLoginPage: React.FC = () => {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ email, code, tenantId: tenantIdFromQuery }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Verification failed')

@@ -14,9 +14,28 @@
 import { Request, Response } from 'express'
 import * as formService from '../services/formService'
 
+function resolveTenantId(req: Request): string | undefined {
+  const tenantFromUser = req.user?.tenantId
+  const tenantFromQuery = typeof req.query.tenantId === 'string' ? req.query.tenantId : undefined
+  const tenantFromBody = typeof req.body?.tenantId === 'string' ? req.body.tenantId : undefined
+  const tenantFromParams = typeof req.params.tenantId === 'string' ? req.params.tenantId : undefined
+
+  // Tenant-scoped admin must stay inside their own tenant.
+  if (tenantFromUser) {
+    const explicitTenant = tenantFromQuery || tenantFromBody || tenantFromParams
+    if (explicitTenant && explicitTenant !== tenantFromUser) {
+      throw new Error('Not authorized for this tenant')
+    }
+    return tenantFromUser
+  }
+
+  // Global admin must provide tenant context explicitly.
+  return tenantFromQuery || tenantFromBody || tenantFromParams
+}
+
 export async function listForms(req: Request, res: Response) {
   try {
-    const tenantId = req.user?.tenantId || (req.params.tenantId as string)
+    const tenantId = resolveTenantId(req)
     if (!tenantId) return res.status(400).json({ error: 'Tenant required' })
 
     const forms = await formService.listForms(tenantId)
@@ -29,7 +48,7 @@ export async function listForms(req: Request, res: Response) {
 
 export async function createForm(req: Request, res: Response) {
   try {
-    const tenantId = req.user?.tenantId || (req.body.tenantId as string)
+    const tenantId = resolveTenantId(req)
     if (!tenantId) return res.status(400).json({ error: 'Tenant required' })
 
     const { name, description, jotformEmbedUrl, isActive } = req.body
@@ -52,7 +71,7 @@ export async function createForm(req: Request, res: Response) {
 
 export async function getForm(req: Request, res: Response) {
   try {
-    const tenantId = req.user?.tenantId as string
+    const tenantId = resolveTenantId(req)
     if (!tenantId) return res.status(400).json({ error: 'Tenant required' })
 
     const form = await formService.getForm(req.params.id as string, tenantId)
@@ -66,7 +85,7 @@ export async function getForm(req: Request, res: Response) {
 
 export async function updateForm(req: Request, res: Response) {
   try {
-    const tenantId = req.user?.tenantId as string
+    const tenantId = resolveTenantId(req)
     if (!tenantId) return res.status(400).json({ error: 'Tenant required' })
 
     const { name, description, jotformEmbedUrl, isActive } = req.body
@@ -85,7 +104,7 @@ export async function updateForm(req: Request, res: Response) {
 
 export async function deleteForm(req: Request, res: Response) {
   try {
-    const tenantId = req.user?.tenantId as string
+    const tenantId = resolveTenantId(req)
     if (!tenantId) return res.status(400).json({ error: 'Tenant required' })
 
     await formService.deleteForm(req.params.id as string, tenantId)

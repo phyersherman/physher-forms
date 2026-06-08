@@ -148,21 +148,35 @@ export const createEmailConfig = async (
     throw new Error('Provider, API key, and domain are required')
   }
 
-  // Check if config already exists for this tenant
+  // Check if config already exists for this tenant/global slot.
+  // If it exists (including inactive), refresh that record so the UI can recover
+  // from stale or disabled configs instead of hard-failing creation.
   const existing = await prisma.emailConfig.findFirst({
     where: { tenantId: tenantId || null },
   })
 
-  if (existing) {
-    throw new Error(
-      tenantId
-        ? 'Email configuration already exists for this tenant'
-        : 'Global email configuration already exists'
-    )
-  }
-
   // Encrypt API key before storing
   const encryptedApiKey = encrypt(data.apiKey)
+
+  if (existing) {
+    const updated = await prisma.emailConfig.update({
+      where: { id: existing.id },
+      data: {
+        provider: data.provider,
+        apiKey: encryptedApiKey,
+        domain: data.domain,
+        fromEmail: data.fromEmail,
+        fromName: data.fromName,
+        replyToEmail: data.replyToEmail || null,
+        isActive: data.isActive,
+      },
+    })
+
+    return {
+      ...updated,
+      apiKey: '••••••••',
+    }
+  }
 
   const config = await prisma.emailConfig.create({
     data: {

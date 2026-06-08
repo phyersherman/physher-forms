@@ -12,6 +12,7 @@ import {
   sendVerificationCode,
   verifyCode,
 } from '../services/respondentAuthService'
+import tenantService from '../services/tenantService'
 
 const COOKIE_NAME = 'respondent_token'
 const COOKIE_OPTIONS = {
@@ -19,6 +20,19 @@ const COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
   maxAge: 2 * 60 * 60 * 1000, // 2 hours
+}
+
+async function resolveTenantId(req: Request, bodyTenantId?: string): Promise<string | undefined> {
+  if (req.tenantId) return req.tenantId
+  if (bodyTenantId) return bodyTenantId
+  if (process.env.DEFAULT_TENANT_ID) return process.env.DEFAULT_TENANT_ID
+
+  const tenants = await tenantService.list()
+  if (tenants.length === 1) {
+    return tenants[0].id
+  }
+
+  return undefined
 }
 
 /**
@@ -43,8 +57,8 @@ export async function sendCode(req: Request, res: Response) {
       return res.status(400).json({ error: 'Invalid email format' })
     }
 
-    // Use tenant resolved from host, or fall back to body-supplied tenantId
-    const resolvedTenantId: string | undefined = req.tenantId || tenantId
+    // Resolve tenant from host, explicit body value, env fallback, or single-tenant auto-detect.
+    const resolvedTenantId = await resolveTenantId(req, tenantId)
     if (!resolvedTenantId) {
       return res.status(400).json({ error: 'Tenant could not be determined' })
     }
@@ -83,7 +97,7 @@ export async function verifyCodeHandler(req: Request, res: Response) {
       return res.status(400).json({ error: 'Code is required' })
     }
 
-    const resolvedTenantId: string | undefined = req.tenantId || tenantId
+    const resolvedTenantId = await resolveTenantId(req, tenantId)
     if (!resolvedTenantId) {
       return res.status(400).json({ error: 'Tenant could not be determined' })
     }

@@ -16,7 +16,24 @@ async function fetchJson(path: string, opts: any = {}, retryCount = 0) {
   }
 
   const res = await fetch(url, init)
-  const payload = await res.json()
+
+  let payload: any = null
+  const contentType = res.headers.get('content-type') || ''
+  const hasBody = res.status !== 204 && res.status !== 205
+
+  if (hasBody) {
+    if (contentType.includes('application/json')) {
+      payload = await res.json()
+    } else {
+      const text = await res.text()
+      try {
+        payload = text ? JSON.parse(text) : null
+      } catch {
+        payload = text
+      }
+    }
+  }
+
   if (!res.ok) {
     // Handle 401: attempt refresh and retry once
     if (res.status === 401 && retryCount === 0) {
@@ -26,13 +43,13 @@ async function fetchJson(path: string, opts: any = {}, retryCount = 0) {
         return fetchJson(path, opts, retryCount + 1)
       } catch (refreshError) {
         // If refresh fails, throw the original error
-        const err = new Error(payload.error || 'Request failed')
+        const err = new Error(payload?.error || 'Request failed')
         ;(err as any).statusCode = res.status
         ;(err as any).payload = payload
         throw err
       }
     }
-    const err = new Error(payload.error || 'Request failed')
+    const err = new Error(payload?.error || 'Request failed')
     ;(err as any).statusCode = res.status
     ;(err as any).payload = payload
     throw err
@@ -89,6 +106,51 @@ export async function createCourse(title: string, description?: string, tenantId
 
 export async function getCourse(courseId: string) {
   return fetchJson(`/courses/${courseId}`, { method: 'GET' })
+}
+
+// Admin form management
+export async function getAdminForms(tenantId?: string) {
+  const url = tenantId ? `/admin/forms?tenantId=${tenantId}` : '/admin/forms'
+  return fetchJson(url, { method: 'GET' })
+}
+
+export async function createAdminForm(data: {
+  tenantId?: string
+  name: string
+  description?: string
+  jotformEmbedUrl: string
+  isActive?: boolean
+}) {
+  await refreshCsrf()
+  return fetchJson('/admin/forms', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateAdminForm(
+  formId: string,
+  data: {
+    tenantId?: string
+    name?: string
+    description?: string
+    jotformEmbedUrl?: string
+    isActive?: boolean
+  }
+) {
+  await refreshCsrf()
+  return fetchJson(`/admin/forms/${formId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteAdminForm(formId: string, tenantId?: string) {
+  await refreshCsrf()
+  const url = tenantId ? `/admin/forms/${formId}?tenantId=${tenantId}` : `/admin/forms/${formId}`
+  return fetchJson(url, { method: 'DELETE' })
 }
 
 export async function updateCourse(courseId: string, title?: string, description?: string, chapters?: any[]) {
@@ -215,7 +277,7 @@ export async function createTenant(data: { name: string; domain?: string; theme_
   })
 }
 
-export async function updateTenant(tenantId: string, data: { name?: string; domain?: string; theme_config?: any; certificateSignature?: string | null }) {
+export async function updateTenant(tenantId: string, data: { name?: string; domain?: string; theme_config?: any; certificateSignature?: string | null; allowedDomains?: string[] }) {
   return fetchJson(`/tenants/${tenantId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -802,6 +864,10 @@ export default {
   getTenantCourses,
   createCourse,
   getCourse,
+  getAdminForms,
+  createAdminForm,
+  updateAdminForm,
+  deleteAdminForm,
   updateCourse,
   deleteCourse,
   assignCourseToTenant,

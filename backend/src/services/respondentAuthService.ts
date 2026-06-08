@@ -55,7 +55,11 @@ export async function validateEmailDomain(email: string, tenantId: string): Prom
   if (!domain) throw new Error('Invalid email address')
 
   const allowed = tenant.allowedDomains.map((d) => d.toLowerCase())
-  if (allowed.length > 0 && !allowed.includes(domain)) {
+  if (allowed.length === 0) {
+    throw new Error('No approved email domains are configured for this form access')
+  }
+
+  if (!allowed.includes(domain)) {
     throw new Error('This email domain is not authorized')
   }
 }
@@ -125,6 +129,8 @@ export async function sendVerificationCode(
         subject: `Your verification code for ${tenant?.name || 'PhysherForms'}`,
         templateName: 'verification-code',
         variables: {
+          recipientName: normalizedEmail.split('@')[0] || 'there',
+          magicCode: code,
           code,
           organizationName: tenant?.name || 'PhysherForms',
           expiryMinutes: '10',
@@ -142,6 +148,8 @@ export async function sendVerificationCode(
     subject: `Your verification code for ${tenant?.name || 'PhysherForms'}`,
     templateName: 'verification-code',
     variables: {
+      recipientName: normalizedEmail.split('@')[0] || 'there',
+      magicCode: code,
       code,
       organizationName: tenant?.name || 'PhysherForms',
       expiryMinutes: '10',

@@ -37,7 +37,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
         </div>
 
         <nav className={styles.nav}>
-          <Link href="/admin" className={`${styles.navItem} ${isActive('/admin') && !router.pathname.includes('/forms') && !router.pathname.includes('/completions') && !router.pathname.includes('/tenants') && !router.pathname.includes('/users') && !router.pathname.includes('/email') ? styles.active : ''}`}>
+          <Link href="/admin" className={`${styles.navItem} ${isActive('/admin') && !router.pathname.includes('/forms') && !router.pathname.includes('/completions') && !router.pathname.includes('/tenants') && !router.pathname.includes('/users') && !router.pathname.includes('/email') && !router.pathname.includes('/domains') ? styles.active : ''}`}>
             <span className={styles.icon}>📊</span>
             <span className={styles.label}>Dashboard</span>
           </Link>
@@ -52,14 +52,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
             <span className={styles.label}>Completions</span>
           </Link>
 
-          <Link href="/admin/tenants" className={`${styles.navItem} ${isActive('/admin/tenants') ? styles.active : ''}`}>
-            <span className={styles.icon}>🏢</span>
-            <span className={styles.label}>Tenants</span>
-          </Link>
-
-          <Link href="/admin/users" className={`${styles.navItem} ${router.pathname === '/admin/users' ? styles.active : ''}`}>
-            <span className={styles.icon}>👥</span>
-            <span className={styles.label}>Global Users</span>
+          <Link href="/admin/domains" className={`${styles.navItem} ${router.pathname === '/admin/domains' ? styles.active : ''}`}>
+            <span className={styles.icon}>🌐</span>
+            <span className={styles.label}>Domains</span>
           </Link>
 
           <Link href="/admin/email-config" className={`${styles.navItem} ${router.pathname === '/admin/email-config' ? styles.active : ''}`}>

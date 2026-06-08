@@ -21,15 +21,14 @@ export interface UpdateFormInput {
 }
 
 export async function createForm(input: CreateFormInput) {
-  // Basic URL safety: ensure jotformEmbedUrl is a valid https URL
-  validateJotformUrl(input.jotformEmbedUrl)
+  const normalizedEmbed = normalizeEmbedInput(input.jotformEmbedUrl)
 
   return prisma.form.create({
     data: {
       tenantId: input.tenantId,
       name: input.name.trim(),
       description: input.description?.trim(),
-      jotformEmbedUrl: input.jotformEmbedUrl.trim(),
+      jotformEmbedUrl: normalizedEmbed,
       isActive: input.isActive ?? true,
     },
   })
@@ -49,8 +48,9 @@ export async function getForm(id: string, tenantId: string) {
 }
 
 export async function updateForm(id: string, tenantId: string, input: UpdateFormInput) {
-  if (input.jotformEmbedUrl) {
-    validateJotformUrl(input.jotformEmbedUrl)
+  let normalizedEmbed: string | undefined
+  if (input.jotformEmbedUrl !== undefined) {
+    normalizedEmbed = normalizeEmbedInput(input.jotformEmbedUrl)
   }
 
   return prisma.form.update({
@@ -58,7 +58,7 @@ export async function updateForm(id: string, tenantId: string, input: UpdateForm
     data: {
       ...(input.name !== undefined && { name: input.name.trim() }),
       ...(input.description !== undefined && { description: input.description.trim() }),
-      ...(input.jotformEmbedUrl !== undefined && { jotformEmbedUrl: input.jotformEmbedUrl.trim() }),
+      ...(normalizedEmbed !== undefined && { jotformEmbedUrl: normalizedEmbed }),
       ...(input.isActive !== undefined && { isActive: input.isActive }),
     },
   })
@@ -73,17 +73,37 @@ export async function deleteForm(id: string, tenantId: string) {
 }
 
 /**
- * Ensure the embed URL is an https URL (basic security guard:
- * prevents javascript: or data: URLs from being stored).
+ * Accept either a direct https URL, an iframe snippet, or raw form/embed HTML.
+ * Blocks dangerous protocols like javascript: and data: when URLs are present.
  */
-function validateJotformUrl(url: string): void {
+function normalizeEmbedInput(value: string): string {
+  const raw = value.trim()
+  if (!raw) throw new Error('Embed input is required')
+
+  // Raw HTML/snippet mode
+  if (raw.startsWith('<')) {
+    const srcMatch = raw.match(/<iframe[^>]*\ssrc=["']([^"']+)["']/i)
+    if (srcMatch?.[1]) {
+      validateHttpsUrl(srcMatch[1])
+    } else if (/javascript:|data:/i.test(raw)) {
+      throw new Error('Embed HTML contains unsupported URL protocols')
+    }
+    return raw
+  }
+
+  // URL mode
+  validateHttpsUrl(raw)
+  return raw
+}
+
+function validateHttpsUrl(url: string): void {
   try {
     const parsed = new URL(url)
     if (parsed.protocol !== 'https:') {
-      throw new Error('JotForm embed URL must use HTTPS')
+      throw new Error('Embed URL must use HTTPS')
     }
   } catch (e: any) {
     if (e.message?.includes('HTTPS')) throw e
-    throw new Error('JotForm embed URL is not a valid URL')
+    throw new Error('Embed URL is not a valid URL')
   }
 }

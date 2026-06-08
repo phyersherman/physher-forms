@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../../src/components/AdminLayout'
 import { useAuth } from '../../../src/auth/AuthProvider'
 import { useRouter } from 'next/router'
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'
+import api from '../../../src/lib/api'
 
 interface Form {
   id: string
@@ -23,6 +22,7 @@ interface ModalState {
 const AdminFormsPage: React.FC = () => {
   const { user } = useAuth()
   const router = useRouter()
+  const [tenantId, setTenantId] = useState<string>('')
   const [forms, setForms] = useState<Form[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -34,22 +34,62 @@ const AdminFormsPage: React.FC = () => {
     if (user === null) router.replace('/login')
   }, [user, router])
 
+  useEffect(() => {
+    const resolveTenant = async () => {
+      if (!user) return
+
+      if (user.tenantId) {
+        setTenantId(user.tenantId)
+        return
+      }
+
+      const savedTenantId = typeof window !== 'undefined' ? localStorage.getItem('selectedTenantId') || '' : ''
+      if (savedTenantId) {
+        setTenantId(savedTenantId)
+        return
+      }
+
+      try {
+        const tenants = await api.getTenants()
+        const firstTenantId = Array.isArray(tenants) && tenants.length > 0 ? tenants[0].id : ''
+        if (firstTenantId) {
+          setTenantId(firstTenantId)
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('selectedTenantId', firstTenantId)
+          }
+        }
+      } catch {
+        // no-op: loadForms will show a clearer tenant error
+      }
+    }
+
+    resolveTenant()
+  }, [user])
+
   const loadForms = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${API_BASE}/admin/forms`, { credentials: 'include' })
-      if (res.status === 401) { router.replace('/login'); return }
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to load forms')
+      if (!tenantId) {
+        setForms([])
+        setError('Tenant context is required to manage forms.')
+        return
+      }
+
+      const data = await api.getAdminForms(tenantId)
       setForms(data)
+      setError(null)
     } catch (e: any) {
+      if (e?.statusCode === 401) {
+        router.replace('/login')
+        return
+      }
       setError(e.message)
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { loadForms() }, [])
+  useEffect(() => { loadForms() }, [tenantId])
 
   const openCreate = () => setModal({ open: true, form: { isActive: true }, isEdit: false })
   const openEdit = (form: Form) => setModal({ open: true, form: { ...form }, isEdit: true })
@@ -61,15 +101,26 @@ const AdminFormsPage: React.FC = () => {
     setSaveError(null)
     try {
       const { id, ...body } = modal.form
-      const url = modal.isEdit ? `${API_BASE}/admin/forms/${id}` : `${API_BASE}/admin/forms`
-      const res = await fetch(url, {
-        method: modal.isEdit ? 'PUT' : 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Save failed')
+      if (!tenantId) throw new Error('Tenant context is required to save forms')
+
+      if (modal.isEdit && id) {
+        await api.updateAdminForm(id, {
+          tenantId,
+          name: body.name,
+          description: body.description,
+          jotformEmbedUrl: body.jotformEmbedUrl,
+          isActive: body.isActive,
+        })
+      } else {
+        await api.createAdminForm({
+          tenantId,
+          name: body.name || '',
+          description: body.description,
+          jotformEmbedUrl: body.jotformEmbedUrl || '',
+          isActive: body.isActive,
+        })
+      }
+
       closeModal()
       await loadForms()
     } catch (e: any) {
@@ -81,28 +132,23 @@ const AdminFormsPage: React.FC = () => {
 
   const toggleActive = async (form: Form) => {
     try {
-      await fetch(`${API_BASE}/admin/forms/${form.id}`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: !form.isActive }),
+      await api.updateAdminForm(form.id, {
+        tenantId,
+        isActive: !form.isActive,
       })
       await loadForms()
-    } catch (e) {
-      console.error('Toggle failed', e)
+    } catch (e: any) {
+      setError(e.message || 'Failed to update form status')
     }
   }
 
   const handleDelete = async (form: Form) => {
     if (!confirm(`Delete "${form.name}"? This cannot be undone.`)) return
     try {
-      await fetch(`${API_BASE}/admin/forms/${form.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
+      await api.deleteAdminForm(form.id, tenantId)
       await loadForms()
-    } catch (e) {
-      console.error('Delete failed', e)
+    } catch (e: any) {
+      setError(e.message || 'Failed to delete form')
     }
   }
 
@@ -203,14 +249,14 @@ const AdminFormsPage: React.FC = () => {
                   style={{ ...inputStyle, resize: 'vertical' }}
                 />
               </Field>
-              <Field label="JotForm Embed URL *">
-                <input
+              <Field label="Form Embed (URL, iframe, or full embed HTML) *">
+                <textarea
                   required
-                  type="url"
-                  placeholder="https://form.jotform.com/..."
+                  placeholder={'https://form.jotform.com/...\n\nOR paste iframe:\n<iframe src="https://form.jotform.com/..." ...></iframe>\n\nOR paste full embed HTML/source'}
                   value={modal.form.jotformEmbedUrl || ''}
                   onChange={(e) => setModal((m) => ({ ...m, form: { ...m.form, jotformEmbedUrl: e.target.value } }))}
-                  style={inputStyle}
+                  rows={8}
+                  style={{ ...inputStyle, resize: 'vertical', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
                 />
               </Field>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', cursor: 'pointer' }}>
