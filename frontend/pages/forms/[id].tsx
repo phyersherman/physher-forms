@@ -8,7 +8,6 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/router'
-import Script from 'next/script'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'
 
@@ -181,28 +180,27 @@ const FormViewPage: React.FC = () => {
         </div>
       )}
 
-      {/* JotForm iframe — responsive, fills remaining height */}
-      <div style={{ flex: 1, position: 'relative' }}>
+      {/* JotForm iframe — fills remaining height; form scrolls internally.
+          NOTE: we intentionally do NOT load JotForm's feedback2.js auto-resizer.
+          It shrinks the iframe to the form's content height, leaving dead gray
+          space below it that grows with viewport height. Keeping a full-height
+          iframe lets the form's own background fill the area instead. */}
+      <div style={{ flex: 1, position: 'relative', background: '#fff' }}>
         <iframe
           src={iframeSrc || undefined}
           srcDoc={iframeSrcDoc}
           title={form.name}
           style={{
+            position: 'absolute',
+            inset: 0,
             width: '100%',
             height: '100%',
-            minHeight: '600px',
             border: 'none',
             display: 'block',
           }}
           allow="geolocation; camera; microphone"
         />
       </div>
-
-      {/* JotForm iframe resizer script */}
-      <Script
-        src="https://www.jotform.com/static/feedback2.js"
-        strategy="afterInteractive"
-      />
     </main>
   )
 }
